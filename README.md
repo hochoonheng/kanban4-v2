@@ -4,6 +4,8 @@ A single-file Kanban board for tracking IT project tasks, built for internal dem
 
 **Live demo:** https://hochoonheng.github.io/kanban4/
 
+![Kanban board with Backlog, In Progress, Blocked and Done columns](docs/screenshot.png)
+
 ## Features
 
 - Four columns: **Backlog**, **In Progress**, **Blocked** and **Done**

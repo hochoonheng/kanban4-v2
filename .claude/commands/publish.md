@@ -1,7 +1,7 @@
 ---
-description: Security-scan, update README + repo About, set up the GitHub Pages workflow, then commit and push to a GitHub repo
+description: Security-scan, update README (with a Playwright screenshot) + repo About, set up the GitHub Pages workflow, then commit and push to a GitHub repo
 argument-hint: <owner/repo or https://github.com/owner/repo> [branch]
-allowed-tools: Bash, PowerShell, Read, Write, Edit, Glob, Grep, AskUserQuestion
+allowed-tools: Bash, PowerShell, Read, Write, Edit, Glob, Grep, AskUserQuestion, mcp__playwright
 ---
 
 # Publish this project to GitHub
@@ -24,7 +24,7 @@ Work through the steps below **in order**. Stop and report if any step fails; ne
 
 Everything pushed becomes public on the internet. Scan the **files that would be committed** (tracked files plus the untracked files you intend to add, excluding `.git/`).
 
-1. **Inventory.** Run `git status --porcelain` and list every untracked or modified file. Classify each as *site/source*, *repo docs/config*, or *unrelated* (e.g. `.docx`, `.xlsx`, `.pdf`, screenshots, assessment or personal documents, archives). Unrelated files must **not** be staged; propose adding them to `.gitignore` and ask the user before doing so.
+1. **Inventory.** Run `git status --porcelain` and list every untracked or modified file. Classify each as *site/source*, *repo docs/config*, or *unrelated* (e.g. `.docx`, `.xlsx`, `.pdf`, screenshots, assessment or personal documents, archives). The README screenshot `docs/screenshot.png` (step 2a) is *repo docs*, not unrelated. Unrelated files must **not** be staged; propose adding them to `.gitignore` and ask the user before doing so.
 2. **Secrets.** Grep the candidate files (case-insensitive) for:
    - Keys and tokens: `api[_-]?key`, `secret`, `token`, `password`, `passwd`, `bearer`, `authorization:`, `-----BEGIN .*PRIVATE KEY-----`, `ghp_[A-Za-z0-9]{36}`, `github_pat_`, `gho_`, `sk-[A-Za-z0-9]{20,}`, `sk-ant-`, `AKIA[0-9A-Z]{16}`, `AIza[0-9A-Za-z_-]{35}`, `xox[baprs]-`.
    - Connection strings: `mongodb(\+srv)?://`, `postgres(ql)?://`, `mysql://`, `://[^/\s:]+:[^@\s]+@` (credentials in URLs).
@@ -58,6 +58,26 @@ Read `index.html`, `CLAUDE.md` and the existing `README.md`. Create or rewrite `
 
 Keep it concise and factual — do not invent features that are not in the code.
 
+### 2a. Screenshot
+
+Capture a fresh screenshot of the board with the **Playwright MCP** server (configured in `.mcp.json`) and show it in the README.
+
+1. Call `browser_resize` with 1440×900.
+2. Call `browser_navigate` to `file:///<absolute path to index.html>`, URL-encoding spaces as `%20`.
+3. Call `browser_console_messages` and stop if the page logged any errors.
+4. Call `browser_take_screenshot` with `type: "png"` and `filename: "screenshot.png"`. Leave `fullPage` off so the image shows the viewport only.
+5. Call `browser_close`.
+6. The server saves the file relative to its own working directory, so find `screenshot.png` and move it to `docs/screenshot.png`. Delete any `page-*.yml` snapshot files it left behind.
+7. Look at the image (Read it) to confirm it shows the board with its seed data and has no error toast or blank area.
+8. Make sure `README.md` shows it directly under the **Live demo** line:
+   `![Kanban board with Backlog, In Progress, Blocked and Done columns](docs/screenshot.png)`
+
+If the Playwright MCP tools are not loaded in this session, fall back to the Playwright CLI:
+`npx -y playwright screenshot --viewport-size=1440,900 "file:///<path>/index.html" docs/screenshot.png`
+If neither works (for example, Node.js is missing), keep the existing screenshot and list this as a manual step in the final report.
+
+The screenshot is repo documentation only. It is committed in step 5, but the Pages workflow does not publish it.
+
 ## 3. GitHub "About" section
 
 Requires `gh`. Set description, homepage and topics:
@@ -85,7 +105,7 @@ Adjust the description to match the README (max ~350 chars). If the user supplie
 
 ## 5. Commit and push
 
-1. Stage **explicitly by path** — never `git add -A` / `git add .`. Only the files that passed the scan (e.g. `index.html`, `README.md`, `CLAUDE.md`, `.gitignore`, `.github/workflows/pages.yml`, `.claude/commands/*.md`).
+1. Stage **explicitly by path** — never `git add -A` / `git add .`. Only the files that passed the scan (e.g. `index.html`, `README.md`, `docs/screenshot.png`, `CLAUDE.md`, `.mcp.json`, `.gitignore`, `.github/workflows/pages.yml`, `.claude/commands/*.md`).
 2. Show `git status` and `git diff --cached --stat`, then re-run the secret grep from step 1.2 on the staged content (`git diff --cached`) as a final check.
 3. Commit with a clear message describing what changed (end with the attribution line required by the current session, if any).
 4. Pushing publishes to the internet: summarise what will be pushed (repo, branch, files) and get a clear yes before `git push -u origin BRANCH`. Never force-push; if the push is rejected, fetch and explain the divergence instead.

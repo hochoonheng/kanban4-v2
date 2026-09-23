@@ -1,0 +1,7 @@
+# Unrelated local files (assessment documents, exercise screenshots)
+*.docx
+Exercise*Screenshot*.png
+
+# Playwright MCP snapshot leftovers
+.playwright-mcp/
+page-*.yml
