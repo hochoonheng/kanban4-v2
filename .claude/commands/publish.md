@@ -62,14 +62,18 @@ Keep it concise and factual — do not invent features that are not in the code.
 
 Capture a fresh screenshot of the board with the **Playwright MCP** server (configured in `.mcp.json`) and show it in the README.
 
-1. Call `browser_resize` with 1440×900.
-2. Call `browser_navigate` to `file:///<absolute path to index.html>`, URL-encoding spaces as `%20`.
-3. Call `browser_console_messages` and stop if the page logged any errors.
-4. Call `browser_take_screenshot` with `type: "png"` and `filename: "screenshot.png"`. Leave `fullPage` off so the image shows the viewport only.
-5. Call `browser_close`.
-6. The server saves the file relative to its own working directory, so find `screenshot.png` and move it to `docs/screenshot.png`. Delete any `page-*.yml` snapshot files it left behind.
-7. Look at the image (Read it) to confirm it shows the board with its seed data and has no error toast or blank area.
-8. Make sure `README.md` shows it directly under the **Live demo** line:
+The Playwright MCP server blocks `file://` URLs by default. Do not add `--allow-unrestricted-file-access` to `.mcp.json` to get around it; serve the page over a short-lived local HTTP server instead.
+
+1. Start a local server that stops itself after 90 seconds, and wait until it responds:
+   `(timeout 90 npx -y http-server . -p 8765 -a 127.0.0.1 -s -c-1 >/dev/null 2>&1 &)`, then poll `curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8765/index.html` until it returns `200`.
+2. Call `browser_resize` with 1440×900.
+3. Call `browser_navigate` to `http://127.0.0.1:8765/index.html`.
+4. Call `browser_console_messages` with `level: "error"` and stop if the page logged any errors.
+5. Call `browser_take_screenshot` with `type: "png"`, `scale: "css"` and `filename: "screenshot.png"`. Leave `fullPage` off so the image shows the viewport only.
+6. Call `browser_close`.
+7. The server saves the file relative to its own working directory, so move `screenshot.png` to `docs/screenshot.png`. Delete the `.playwright-mcp/` folder and any `page-*.yml` snapshot files it left behind.
+8. Look at the image (Read it) to confirm it shows the board with its seed data and has no error toast or blank area.
+9. Make sure `README.md` shows it directly under the **Live demo** line:
    `![Kanban board with Backlog, In Progress, Blocked and Done columns](docs/screenshot.png)`
 
 If the Playwright MCP tools are not loaded in this session, fall back to the Playwright CLI:
