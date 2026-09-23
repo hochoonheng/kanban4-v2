@@ -3,52 +3,80 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  SECURITY HEADERS (meta equivalents — GitHub Pages cannot set response headers)
+  - CSP: nothing loads except this file's own hashed style and script blocks, a data: favicon,
+    and fetch() calls to FormSubmit. Hashes are regenerated whenever the style or script changes
+    (see CLAUDE.md → "Content Security Policy").
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'sha256-9h1oB+FhClqLxVCZQGHw+fxA6Z5VegG4kVCNeqYUXcw='; script-src 'sha256-Puvdyhckv3a6GgZPaKLdyNYVkHSu3fd3q/SqZuo+ZWU='; img-src data:; connect-src https://formsubmit.co; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="referrer" content="strict-origin">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light">
 <title>UOB IT PMO Kanban</title>
 <meta name="description" content="Internal demo / training Kanban board for IT project management. In-memory only.">
-<link rel="icon" href="data:,">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23EA580C'/%3E%3Crect x='3' y='4' width='3' height='8' rx='1' fill='%23fff'/%3E%3Crect x='7' y='4' width='3' height='5' rx='1' fill='%23fff'/%3E%3Crect x='11' y='4' width='2' height='3' rx='1' fill='%23fff'/%3E%3C/svg%3E">
 <style>
 /* =========================================================
-   1. DESIGN TOKENS — palette, spacing scale, radii, shadows
+   1. DESIGN TOKENS — palette, type scale, spacing, radii, shadows
    ========================================================= */
 :root {
-  /* Corporate blue palette */
-  --c-navy-900: #0a2350;
-  --c-navy-800: #0f2f6b;
-  --c-blue-700: #154a9e;
-  --c-blue-600: #1c5cc2;
-  --c-blue-100: #e3ecfa;
-  --c-blue-50:  #f2f6fd;
+  /* Orange palette. 700 is the only orange used for text (AA on white). */
+  --c-orange-800: #9a3412;
+  --c-orange-700: #c2410c;
+  --c-orange-600: #ea580c;
+  --c-orange-200: #fed7aa;
+  --c-orange-100: #ffedd5;
+  --c-orange-50:  #fff7ed;
 
-  /* Surfaces & text */
-  --c-bg: #eef2f7;
+  /* Surfaces & text (neutral, slightly cool so the orange carries the warmth) */
+  --c-bg: #f6f7f9;
   --c-surface: #ffffff;
-  --c-surface-2: #f6f8fb;
-  --c-border: #d5dde8;
-  --c-text: #1a2433;
-  --c-text-muted: #56637a;
+  --c-surface-2: #f1f3f6;
+  --c-border: #e2e5ea;
+  --c-border-strong: #c9ced6;
+  --c-text: #1f2328;
+  --c-text-muted: #59616e;
   --c-text-inverse: #ffffff;
 
+  /* Status colours (always paired with a text label) */
+  --c-status-backlog: #6b7280;
+  --c-status-progress: #ea580c;
+  --c-status-blocked: #b91c1c;
+  --c-status-done: #15803d;
+
   /* Priority colours (always paired with a text label) */
-  --c-prio-critical: #c62828;
-  --c-prio-high: #b45f06;
-  --c-prio-medium: #1c5cc2;
-  --c-prio-low: #7a8699;
-  --c-prio-critical-bg: #fde8e8;
-  --c-prio-high-bg: #fdf0dc;
-  --c-prio-medium-bg: #e3ecfa;
-  --c-prio-low-bg: #edf0f4;
+  --c-prio-critical: #b91c1c;
+  --c-prio-high: #b45309;
+  --c-prio-medium: #1d4ed8;
+  --c-prio-low: #4b5563;
+  --c-prio-critical-bg: #fee2e2;
+  --c-prio-high-bg: #fef3c7;
+  --c-prio-medium-bg: #dbeafe;
+  --c-prio-low-bg: #f3f4f6;
 
-  /* Status / feedback */
-  --c-danger: #b3261e;
-  --c-danger-bg: #fdecea;
-  --c-success: #1b7a43;
-  --c-success-bg: #e6f4ec;
-  --c-warning: #8a5300;
-  --c-warning-bg: #fff4de;
-  --c-info: #154a9e;
-  --c-info-bg: #e3ecfa;
+  /* Feedback */
+  --c-danger: #b91c1c;
+  --c-danger-bg: #fef2f2;
+  --c-danger-border: #fca5a5;
+  --c-success: #15803d;
+  --c-success-bg: #f0fdf4;
+  --c-warning: #92400e;
+  --c-warning-bg: #fffbeb;
+  --c-info: #9a3412;
+  --c-info-bg: #fff7ed;
 
-  --c-focus: #ffb300;
+  /* Focus ring: blue so it stays visible on white and on orange buttons */
+  --c-focus: #1d4ed8;
+  --c-backdrop: rgba(31, 35, 40, 0.35);
+
+  /* Type scale */
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-base: 0.9375rem;
+  --fs-md: 1.0625rem;
+  --fs-lg: 1.375rem;
+  --fs-xl: 2rem;
 
   /* Spacing scale */
   --space-1: 4px;
@@ -57,16 +85,22 @@
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
+  --space-7: 48px;
+
+  --page-max: 1440px;
+  --accent-bar: 4px;
 
   --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
   --radius-pill: 999px;
 
-  --shadow-card: 0 1px 2px rgba(10, 35, 80, 0.08), 0 1px 3px rgba(10, 35, 80, 0.06);
-  --shadow-raised: 0 8px 24px rgba(10, 35, 80, 0.18);
+  --shadow-card: 0 1px 2px rgba(31, 35, 40, 0.06);
+  --shadow-hover: 0 4px 12px rgba(31, 35, 40, 0.10);
+  --shadow-raised: 0 12px 32px rgba(31, 35, 40, 0.18);
 
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, "Cascadia Mono", Consolas, "SFMono-Regular", Menlo, monospace;
 }
 
@@ -79,15 +113,18 @@ html, body { margin: 0; }
 
 body {
   font-family: var(--font-sans);
-  font-size: 15px;
-  line-height: 1.45;
+  font-size: var(--fs-base);
+  line-height: 1.5;
   color: var(--c-text);
   background: var(--c-bg);
+  -webkit-font-smoothing: antialiased;
 }
 
 button, input, select, textarea { font: inherit; color: inherit; }
 
 button { cursor: pointer; }
+
+h1, h2, h3 { font-family: var(--font-display); }
 
 /* Visible focus ring on every interactive element */
 :focus-visible {
@@ -105,33 +142,42 @@ button { cursor: pointer; }
   border: 0;
 }
 
+.wrap {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding-left: var(--space-6);
+  padding-right: var(--space-6);
+}
+
 /* Generic buttons */
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
+  min-height: 40px;
   padding: var(--space-2) var(--space-4);
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   font-weight: 600;
   line-height: 1.2;
   background: var(--c-surface);
+  transition: background-color 120ms ease, border-color 120ms ease;
 }
-.btn-primary { background: var(--c-blue-600); color: var(--c-text-inverse); }
-.btn-primary:hover { background: var(--c-blue-700); }
-.btn-primary:disabled { background: var(--c-prio-low); cursor: progress; }
-.btn-light { background: var(--c-surface); color: var(--c-navy-800); }
-.btn-light:hover { background: var(--c-blue-100); }
-.btn-ghost { background: transparent; border-color: var(--c-border); color: var(--c-text); }
+.btn-primary { background: var(--c-orange-700); color: var(--c-text-inverse); }
+.btn-primary:hover { background: var(--c-orange-800); }
+.btn-primary:disabled { background: var(--c-text-muted); cursor: progress; }
+.btn-ghost { background: var(--c-surface); border-color: var(--c-border-strong); color: var(--c-text); }
 .btn-ghost:hover { background: var(--c-surface-2); }
+.btn svg { width: 16px; height: 16px; flex: none; }
 
 /* =========================================================
-   3. HEADER — wordmark, summary strip, add button, demo note
+   3. HEADER — wordmark, as-of date, add button, demo note
    ========================================================= */
 .app-header {
-  background: linear-gradient(135deg, var(--c-navy-900), var(--c-blue-700));
-  color: var(--c-text-inverse);
-  padding: var(--space-4) var(--space-5);
+  background: var(--c-surface);
+  border-top: var(--accent-bar) solid var(--c-orange-600);
+  border-bottom: 1px solid var(--c-border);
 }
 .header-row {
   display: flex;
@@ -139,51 +185,209 @@ button { cursor: pointer; }
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-4);
 }
-.wordmark {
+.brand { display: flex; align-items: center; gap: var(--space-3); }
+.brand-mark {
+  display: grid;
+  grid-template-columns: repeat(3, 5px);
+  align-items: end;
+  gap: 3px;
+  width: 36px; height: 36px;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  background: var(--c-orange-600);
+}
+.brand-mark span { display: block; border-radius: 1px; background: var(--c-text-inverse); }
+.brand-mark span:nth-child(1) { height: 20px; }
+.brand-mark span:nth-child(2) { height: 13px; }
+.brand-mark span:nth-child(3) { height: 7px; }
+.wordmark { margin: 0; font-size: var(--fs-md); font-weight: 700; line-height: 1.2; }
+.wordmark-sub { display: block; font-family: var(--font-sans); font-size: var(--fs-sm); font-weight: 400; color: var(--c-text-muted); }
+
+.header-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); }
+.as-of { margin: 0; font-size: var(--fs-sm); color: var(--c-text-muted); }
+.as-of strong { color: var(--c-text); font-weight: 600; }
+
+.demo-bar { background: var(--c-orange-50); border-top: 1px solid var(--c-orange-100); }
+.demo-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0 auto;
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--c-warning);
+}
+.demo-note svg { flex: none; width: 16px; height: 16px; margin-top: 2px; }
+
+/* =========================================================
+   4. PORTFOLIO OVERVIEW — headline, KPIs, status mix, workstreams
+   ========================================================= */
+main { padding: var(--space-6) 0 var(--space-7); }
+
+.section-title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-md);
+  font-weight: 650;
+}
+.section-note { margin: calc(-1 * var(--space-2)) 0 var(--space-3); font-size: var(--fs-sm); color: var(--c-text-muted); }
+
+.overview { margin-bottom: var(--space-6); }
+
+.headline {
   margin: 0;
-  font-size: 1.35rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  max-width: 28ch;
+  font-size: var(--fs-xl);
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
 }
-.wordmark span {
-  font-weight: 400;
-  opacity: 0.85;
-  margin-left: var(--space-2);
-  font-size: 0.95rem;
+.headline-sub { margin: var(--space-2) 0 var(--space-5); font-size: var(--fs-md); color: var(--c-text-muted); }
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  list-style: none;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+}
+.kpi {
+  position: relative;
+  padding: var(--space-4) var(--space-5);
+  border-left: 1px solid var(--c-border);
+}
+.kpi:first-child { border-left: 0; }
+.kpi-label { display: block; font-size: var(--fs-sm); font-weight: 600; color: var(--c-text-muted); }
+.kpi-value {
+  display: block;
+  margin-top: var(--space-1);
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 650;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.kpi-note { display: block; margin-top: var(--space-1); font-size: var(--fs-xs); color: var(--c-text-muted); }
+.kpi-alert .kpi-value { color: var(--c-danger); }
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+.panel {
+  padding: var(--space-5);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
 }
 
-.summary {
+/* Status mix — one stacked bar, widths set from state */
+.mix-bar {
   display: flex;
-  flex-wrap: wrap;
+  height: 14px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--c-surface-2);
+}
+.mix-bar span { display: block; height: 100%; min-width: 0; }
+.mix-bar span + span { border-left: 2px solid var(--c-surface); }
+[data-seg="Backlog"]     { background: var(--c-status-backlog); }
+[data-seg="In Progress"] { background: var(--c-status-progress); }
+[data-seg="Blocked"]     { background: var(--c-status-blocked); }
+[data-seg="Done"]        { background: var(--c-status-done); }
+
+.mix-legend {
+  display: grid;
   gap: var(--space-2);
   margin: var(--space-4) 0 0;
   padding: 0;
   list-style: none;
 }
-.summary li {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  font-size: 0.85rem;
+.mix-legend li {
+  display: grid;
+  grid-template-columns: 12px 1fr auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--fs-base);
 }
-.summary strong { font-size: 1rem; font-variant-numeric: tabular-nums; }
-.summary .summary-overdue { background: rgba(198, 40, 40, 0.35); border-color: rgba(255, 180, 180, 0.5); }
+.mix-legend .swatch { width: 12px; height: 12px; border-radius: 3px; }
+.mix-legend strong { font-variant-numeric: tabular-nums; text-align: right; min-width: 2ch; }
+.mix-legend .pct { min-width: 4ch; font-size: var(--fs-sm); color: var(--c-text-muted); text-align: right; font-variant-numeric: tabular-nums; }
 
-.demo-note {
-  margin: var(--space-3) 0 0;
-  font-size: 0.8rem;
-  opacity: 0.85;
+/* Workstream health table */
+.table-wrap { overflow-x: auto; }
+.ws-table { width: 100%; border-collapse: collapse; font-size: var(--fs-base); }
+.ws-table th, .ws-table td {
+  padding: var(--space-3) var(--space-3);
+  text-align: left;
+  border-bottom: 1px solid var(--c-border);
+  white-space: nowrap;
 }
+.ws-table thead th {
+  padding-top: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--c-text-muted);
+  border-bottom-color: var(--c-border-strong);
+}
+.ws-table tbody tr:last-child th, .ws-table tbody tr:last-child td { border-bottom: 0; }
+.ws-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.ws-table td.num.is-alert { color: var(--c-danger); font-weight: 700; }
+.ws-table tbody th { font-weight: 600; white-space: normal; }
+
+.link-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-weight: 600;
+  text-align: left;
+  color: var(--c-text);
+  text-decoration: underline;
+  text-decoration-color: var(--c-border-strong);
+  text-underline-offset: 3px;
+}
+.link-btn:hover { color: var(--c-orange-700); text-decoration-color: currentColor; }
+.link-btn[aria-pressed="true"] { color: var(--c-orange-700); text-decoration-color: currentColor; }
+
+.health {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid currentColor;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.health::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.health-off  { color: var(--c-danger);  background: var(--c-danger-bg); }
+.health-risk { color: var(--c-warning); background: var(--c-warning-bg); }
+.health-ok   { color: var(--c-success); background: var(--c-success-bg); }
+.health-idle { color: var(--c-text-muted); background: var(--c-surface-2); }
 
 /* =========================================================
-   4. FILTER BAR
+   5. FILTER BAR
    ========================================================= */
-main { padding: var(--space-5); }
+.board-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.board-head .section-title { margin: 0; }
+.board-head .section-title:focus { outline: none; }
+.board-head .section-title:focus-visible { outline: 3px solid var(--c-focus); }
 
 .filters {
   display: flex;
@@ -191,24 +395,24 @@ main { padding: var(--space-5); }
   align-items: flex-end;
   gap: var(--space-4);
   padding: var(--space-4);
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-4);
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-lg);
 }
-.filters h2 { margin: 0; font-size: 0.95rem; align-self: center; }
-.filter-field { display: flex; flex-direction: column; gap: var(--space-1); min-width: 180px; }
-.filter-field label { font-size: 0.8rem; font-weight: 600; color: var(--c-text-muted); }
+.filter-field { display: flex; flex-direction: column; gap: var(--space-1); min-width: 200px; }
+.filter-field label { font-size: var(--fs-sm); font-weight: 600; color: var(--c-text-muted); }
 .filter-field input, .filter-field select {
+  min-height: 40px;
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--c-border);
+  border: 1px solid var(--c-border-strong);
   border-radius: var(--radius-md);
   background: var(--c-surface);
 }
-.filter-status { margin: 0 0 0 auto; font-size: 0.85rem; color: var(--c-text-muted); align-self: center; }
+.filter-status { margin: 0; font-size: var(--fs-sm); color: var(--c-text-muted); }
 
 /* =========================================================
-   5. BOARD & COLUMNS
+   6. BOARD & COLUMNS
    ========================================================= */
 .board {
   display: grid;
@@ -221,6 +425,7 @@ main { padding: var(--space-5); }
   flex-direction: column;
   background: var(--c-surface-2);
   border: 1px solid var(--c-border);
+  border-top: var(--accent-bar) solid var(--col-accent, var(--c-status-backlog));
   border-radius: var(--radius-lg);
   min-height: 240px;
   transition: background-color 120ms ease, outline-color 120ms ease;
@@ -228,30 +433,30 @@ main { padding: var(--space-5); }
   outline-offset: -2px;
 }
 .column.drag-over {
-  background: var(--c-blue-100);
-  outline-color: var(--c-blue-600);
+  background: var(--c-orange-50);
+  outline-color: var(--c-orange-700);
 }
+.column[data-status="Backlog"]     { --col-accent: var(--c-status-backlog); }
+.column[data-status="In Progress"] { --col-accent: var(--c-status-progress); }
+.column[data-status="Blocked"]     { --col-accent: var(--c-status-blocked); }
+.column[data-status="Done"]        { --col-accent: var(--c-status-done); }
 .column-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  border-bottom: 3px solid var(--col-accent, var(--c-blue-600));
 }
-.column[data-status="Backlog"]     { --col-accent: var(--c-prio-low); }
-.column[data-status="In Progress"] { --col-accent: var(--c-blue-600); }
-.column[data-status="Blocked"]     { --col-accent: var(--c-prio-critical); }
-.column[data-status="Done"]        { --col-accent: var(--c-success); }
-.column-header h2 { margin: 0; font-size: 1rem; }
-.column-sub { display: block; font-size: 0.75rem; font-weight: 400; color: var(--c-text-muted); }
+.column-header h3 { margin: 0; font-size: var(--fs-md); font-weight: 650; }
+.column-sub { display: block; font-family: var(--font-sans); font-size: var(--fs-xs); font-weight: 400; color: var(--c-text-muted); }
 .count-badge {
-  min-width: 28px;
+  min-width: 30px;
   padding: 2px var(--space-2);
   border-radius: var(--radius-pill);
-  background: var(--c-navy-800);
-  color: var(--c-text-inverse);
-  font-size: 0.8rem;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border-strong);
+  color: var(--c-text);
+  font-size: var(--fs-sm);
   font-weight: 700;
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -260,7 +465,7 @@ main { padding: var(--space-5); }
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-3);
+  padding: 0 var(--space-3) var(--space-3);
   flex: 1;
   min-height: 160px;
 }
@@ -269,107 +474,109 @@ main { padding: var(--space-5); }
   margin: 0;
   padding: var(--space-5) var(--space-3);
   text-align: center;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   color: var(--c-text-muted);
-  border: 1px dashed var(--c-border);
+  border: 1px dashed var(--c-border-strong);
   border-radius: var(--radius-md);
 }
 
 /* =========================================================
-   6. CARDS
+   7. CARDS
    ========================================================= */
 .card {
   position: relative;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
-  border-left: 5px solid var(--prio-color, var(--c-prio-low));
+  border-left: 4px solid var(--prio-color, var(--c-prio-low));
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-card);
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
   cursor: grab;
+  transition: box-shadow 120ms ease;
 }
-.card:hover { box-shadow: var(--shadow-raised); }
+.card:hover { box-shadow: var(--shadow-hover); }
 .card.dragging { opacity: 0.45; cursor: grabbing; }
+.card.is-overdue { background: linear-gradient(var(--c-danger-bg), var(--c-surface) 48px); }
 .card.prio-critical { --prio-color: var(--c-prio-critical); --prio-bg: var(--c-prio-critical-bg); }
 .card.prio-high     { --prio-color: var(--c-prio-high);     --prio-bg: var(--c-prio-high-bg); }
 .card.prio-medium   { --prio-color: var(--c-prio-medium);   --prio-bg: var(--c-prio-medium-bg); }
 .card.prio-low      { --prio-color: var(--c-prio-low);      --prio-bg: var(--c-prio-low-bg); }
 
-.card-top { display: flex; align-items: center; gap: var(--space-2); }
-.card-id { font-family: var(--font-mono); font-size: 0.75rem; color: var(--c-text-muted); }
+.card-top { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
 .pill {
   display: inline-block;
   padding: 1px var(--space-2);
   border-radius: var(--radius-pill);
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
   color: var(--prio-color);
   background: var(--prio-bg);
   border: 1px solid var(--prio-color);
 }
+.badge-overdue {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--c-danger);
+  color: var(--c-text-inverse);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
 .icon-btn {
   margin-left: auto;
-  width: 28px; height: 28px;
+  width: 32px; height: 32px;
   display: inline-grid;
   place-items: center;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--c-text-muted);
-  font-size: 1.15rem;
-  line-height: 1;
 }
+.icon-btn svg { width: 16px; height: 16px; }
 .icon-btn:hover { background: var(--c-danger-bg); color: var(--c-danger); }
 
-.card-title { margin: var(--space-2) 0 var(--space-1); font-size: 0.95rem; line-height: 1.3; overflow-wrap: anywhere; }
-.card-desc { margin: 0 0 var(--space-2); font-size: 0.8rem; color: var(--c-text-muted); overflow-wrap: anywhere; }
+.card-title { margin: var(--space-2) 0 var(--space-1); font-size: var(--fs-base); font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
+.card-desc { margin: 0 0 var(--space-3); font-size: var(--fs-sm); color: var(--c-text-muted); overflow-wrap: anywhere; }
 
-.card-meta { margin: 0; display: grid; gap: 2px; font-size: 0.8rem; }
+.card-meta { margin: 0; display: grid; gap: 2px; font-size: var(--fs-sm); }
 .card-meta div { display: flex; gap: var(--space-2); }
-.card-meta dt { min-width: 58px; color: var(--c-text-muted); }
+.card-meta dt { min-width: 64px; color: var(--c-text-muted); }
 .card-meta dd { margin: 0; overflow-wrap: anywhere; }
-
-.badge-overdue {
-  display: inline-block;
-  margin-left: var(--space-1);
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-pill);
-  background: var(--c-danger-bg);
-  color: var(--c-danger);
-  border: 1px solid rgba(179, 38, 30, 0.35);
-  font-size: 0.7rem;
-  font-weight: 700;
-}
+.card-meta .due-overdue { color: var(--c-danger); font-weight: 700; }
 
 .card-foot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--space-2);
   margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--c-border);
 }
+.card-id { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--c-text-muted); }
 .tag {
   padding: 1px var(--space-2);
   border-radius: var(--radius-sm);
-  background: var(--c-blue-50);
-  border: 1px solid var(--c-blue-100);
-  color: var(--c-navy-800);
-  font-size: 0.72rem;
+  background: var(--c-surface-2);
+  color: var(--c-text-muted);
+  font-size: var(--fs-xs);
   font-weight: 600;
 }
 .move-btn {
-  padding: 2px var(--space-2);
-  border: 1px solid var(--c-border);
+  margin-left: auto;
+  min-height: 28px;
+  padding: 2px var(--space-3);
+  border: 1px solid var(--c-border-strong);
   border-radius: var(--radius-sm);
   background: var(--c-surface);
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
-  color: var(--c-blue-700);
+  color: var(--c-orange-700);
   white-space: nowrap;
 }
-.move-btn:hover, .move-btn[aria-expanded="true"] { background: var(--c-blue-100); }
+.move-btn:hover, .move-btn[aria-expanded="true"] { background: var(--c-orange-50); border-color: var(--c-orange-700); }
 
 .move-menu {
   display: flex;
@@ -377,20 +584,22 @@ main { padding: var(--space-5); }
   gap: var(--space-1);
   margin-top: var(--space-2);
   padding: var(--space-2);
-  background: var(--c-blue-50);
-  border: 1px solid var(--c-blue-100);
+  background: var(--c-orange-50);
+  border: 1px solid var(--c-orange-200);
   border-radius: var(--radius-sm);
 }
-.move-menu p { width: 100%; margin: 0; font-size: 0.72rem; color: var(--c-text-muted); }
+.move-menu p { width: 100%; margin: 0; font-size: var(--fs-xs); color: var(--c-text-muted); }
 .move-menu button {
+  min-height: 28px;
   padding: 2px var(--space-2);
-  border: 1px solid var(--c-blue-600);
+  border: 1px solid var(--c-orange-700);
   border-radius: var(--radius-sm);
   background: var(--c-surface);
-  color: var(--c-blue-700);
-  font-size: 0.78rem;
+  color: var(--c-orange-800);
+  font-size: var(--fs-sm);
+  font-weight: 600;
 }
-.move-menu button:hover { background: var(--c-blue-600); color: var(--c-text-inverse); }
+.move-menu button:hover { background: var(--c-orange-700); color: var(--c-text-inverse); }
 
 .confirm {
   display: flex;
@@ -399,35 +608,38 @@ main { padding: var(--space-5); }
   margin-top: var(--space-2);
   padding: var(--space-2);
   background: var(--c-danger-bg);
+  border: 1px solid var(--c-danger-border);
   border-radius: var(--radius-sm);
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--c-danger);
 }
 .confirm button {
+  min-height: 28px;
   padding: 2px var(--space-3);
   border-radius: var(--radius-sm);
   border: 1px solid var(--c-danger);
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
 }
 .confirm .yes { background: var(--c-danger); color: var(--c-text-inverse); }
 .confirm .no { background: var(--c-surface); color: var(--c-danger); }
 
 /* =========================================================
-   7. ADD TASK DRAWER (dialog)
+   8. ADD TASK DRAWER (dialog)
    ========================================================= */
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(10, 35, 80, 0.25);
+  background: var(--c-backdrop);
   z-index: 20;
 }
 .drawer {
   position: fixed;
   top: 0; right: 0; bottom: 0;
-  width: min(440px, 100%);
+  width: min(460px, 100%);
   background: var(--c-surface);
+  border-top: var(--accent-bar) solid var(--c-orange-600);
   box-shadow: var(--shadow-raised);
   z-index: 30;
   display: flex;
@@ -439,12 +651,10 @@ main { padding: var(--space-5); }
   align-items: center;
   justify-content: space-between;
   padding: var(--space-4) var(--space-5);
-  background: var(--c-navy-800);
-  color: var(--c-text-inverse);
+  border-bottom: 1px solid var(--c-border);
 }
-.drawer-header h2 { margin: 0; font-size: 1.1rem; }
-.drawer-header .icon-btn { color: var(--c-text-inverse); }
-.drawer-header .icon-btn:hover { background: rgba(255, 255, 255, 0.15); color: var(--c-text-inverse); }
+.drawer-header h2 { margin: 0; font-size: var(--fs-lg); font-weight: 650; }
+.drawer-header .icon-btn:hover { background: var(--c-surface-2); color: var(--c-text); }
 
 .task-form {
   flex: 1;
@@ -456,31 +666,32 @@ main { padding: var(--space-5); }
 }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
 .field { display: flex; flex-direction: column; gap: var(--space-1); }
-.field label { font-size: 0.85rem; font-weight: 600; }
+.field label { font-size: var(--fs-sm); font-weight: 600; }
 .field .req { color: var(--c-danger); }
 .field input, .field select, .field textarea {
   width: 100%;
+  min-height: 40px;
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--c-border);
+  border: 1px solid var(--c-border-strong);
   border-radius: var(--radius-md);
   background: var(--c-surface);
 }
-.field textarea { resize: vertical; min-height: 84px; }
+.field textarea { resize: vertical; min-height: 96px; }
 .field [aria-invalid="true"] { border-color: var(--c-danger); background: var(--c-danger-bg); }
-.field-hint { margin: 0; font-size: 0.75rem; color: var(--c-text-muted); text-align: right; }
+.field-hint { margin: 0; font-size: var(--fs-xs); color: var(--c-text-muted); text-align: right; }
 .field-hint-left { text-align: left; }
-.field-error { margin: 0; min-height: 1em; font-size: 0.78rem; font-weight: 600; color: var(--c-danger); }
+.field-error { margin: 0; min-height: 1em; font-size: var(--fs-sm); font-weight: 600; color: var(--c-danger); }
 .field-error:empty { min-height: 0; }
 .form-actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
-  padding-top: var(--space-2);
+  padding-top: var(--space-4);
   border-top: 1px solid var(--c-border);
 }
 
 /* =========================================================
-   8. TOASTS
+   9. TOASTS
    ========================================================= */
 .toast-region {
   position: fixed;
@@ -490,7 +701,7 @@ main { padding: var(--space-5); }
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  max-width: min(380px, calc(100% - 2 * var(--space-4)));
+  max-width: min(400px, calc(100% - 2 * var(--space-4)));
 }
 .toast {
   display: flex;
@@ -498,17 +709,18 @@ main { padding: var(--space-5); }
   align-items: flex-start;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
-  border-left: 5px solid var(--toast-color);
+  border: 1px solid var(--c-border);
+  border-left: 4px solid var(--toast-color);
   background: var(--toast-bg);
   color: var(--c-text);
   box-shadow: var(--shadow-raised);
-  font-size: 0.88rem;
+  font-size: var(--fs-base);
   animation: toast-in 180ms ease-out;
 }
-.toast.leaving { animation: toast-out 220ms ease-in forwards; }
+.toast.leaving { animation: toast-out 200ms ease-in forwards; }
 .toast-success { --toast-color: var(--c-success); --toast-bg: var(--c-success-bg); }
 .toast-warning { --toast-color: var(--c-warning); --toast-bg: var(--c-warning-bg); }
-.toast-info    { --toast-color: var(--c-info);    --toast-bg: var(--c-info-bg); }
+.toast-info    { --toast-color: var(--c-orange-700); --toast-bg: var(--c-surface); }
 .toast-icon { font-weight: 700; color: var(--toast-color); }
 
 @keyframes toast-in  { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -516,70 +728,151 @@ main { padding: var(--space-5); }
 
 @media (prefers-reduced-motion: reduce) {
   .toast, .toast.leaving { animation: none; }
-  .column { transition: none; }
+  .column, .card, .btn { transition: none; }
 }
 
+/* Shown instead of the app when the page is loaded inside a frame (clickjacking guard) */
+.frame-warning { max-width: 60ch; margin: var(--space-7) auto; padding: 0 var(--space-4); }
+
 /* =========================================================
-   9. RESPONSIVE — stack columns below 768px
+   10. RESPONSIVE — overview reflows at 1100px, columns stack below 768px
    ========================================================= */
+@media (max-width: 1099.98px) {
+  .overview-grid { grid-template-columns: 1fr; }
+  .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .kpi:nth-child(4) { border-left: 0; }
+  .kpi:nth-child(n+4) { border-top: 1px solid var(--c-border); }
+  .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 @media (max-width: 767.98px) {
-  .app-header { padding: var(--space-4); }
-  main { padding: var(--space-4); }
+  .wrap { padding-left: var(--space-4); padding-right: var(--space-4); }
+  main { padding-top: var(--space-5); }
+  .headline { font-size: var(--fs-lg); }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi { padding: var(--space-3) var(--space-4); }
+  .kpi:nth-child(n) { border-left: 1px solid var(--c-border); border-top: 1px solid var(--c-border); }
+  .kpi:nth-child(odd) { border-left: 0; }
+  .kpi:nth-child(-n+2) { border-top: 0; }
+  .kpi-value { font-size: var(--fs-lg); }
+  .panel { padding: var(--space-4); }
   .board { grid-template-columns: 1fr; }
   .column { min-height: 0; }
   .card-list { min-height: 80px; }
   .filter-field { min-width: 0; flex: 1 1 100%; }
-  .filter-status { margin-left: 0; }
   .form-row { grid-template-columns: 1fr; }
   .task-form { padding: var(--space-4); }
+}
+
+/* =========================================================
+   11. PRINT — a clean one-pager for status packs
+   ========================================================= */
+@media print {
+  body { background: var(--c-surface); }
+  .header-actions .btn, .filters, .move-btn, .icon-btn, .toast-region, .demo-bar { display: none; }
+  .column, .card, .panel, .kpis { break-inside: avoid; box-shadow: none; }
+  .board { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 </style>
 </head>
 <body>
 
 <!-- =========================================================
-     HEADER — wordmark, live summary strip, Add Task trigger
+     HEADER — wordmark, as-of date, Add Task trigger
      ========================================================= -->
 <header class="app-header">
-  <div class="header-row">
-    <h1 class="wordmark">UOB IT PMO<span>Project Kanban · Demo</span></h1>
-    <button type="button" class="btn btn-light" id="open-add-task" aria-haspopup="dialog" aria-controls="add-task-drawer">
-      <span aria-hidden="true">+</span> Add Task
-    </button>
+  <div class="wrap header-row">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+      <h1 class="wordmark">UOB IT PMO <span class="wordmark-sub">Project portfolio board (demo)</span></h1>
+    </div>
+    <div class="header-actions">
+      <p class="as-of">Status as of <strong><time id="as-of-date"></time></strong></p>
+      <button type="button" class="btn btn-primary" id="open-add-task" aria-haspopup="dialog" aria-controls="add-task-drawer">
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+        Add task
+      </button>
+    </div>
   </div>
-
-  <ul class="summary" id="summary" aria-label="Board summary">
-    <li>Total <strong id="sum-total">0</strong></li>
-    <li>Backlog <strong id="sum-backlog">0</strong></li>
-    <li>In Progress <strong id="sum-inprogress">0</strong></li>
-    <li>Blocked <strong id="sum-blocked">0</strong></li>
-    <li>Done <strong id="sum-done">0</strong></li>
-    <li class="summary-overdue"><span aria-hidden="true">⚠</span> Overdue <strong id="sum-overdue">0</strong></li>
-  </ul>
-
-  <p class="demo-note">
-    <span aria-hidden="true">ⓘ</span>
-    Internal demo / training tool. Changes are held in memory only. Refreshing the page resets the board to the demo data.
-  </p>
+  <div class="demo-bar">
+    <p class="wrap demo-note">
+      <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 7v4M8 4.5v.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <span>Internal demo and training tool. Changes are held in memory only. Refreshing the page resets the board to the demo data.</span>
+    </p>
+  </div>
 </header>
 
-<main>
+<main class="wrap">
+  <!-- =========================================================
+       PORTFOLIO OVERVIEW — counts ALL tasks (ignores filters)
+       ========================================================= -->
+  <section class="overview" aria-labelledby="overview-headline">
+    <h2 class="headline" id="overview-headline" aria-live="polite"></h2>
+    <p class="headline-sub" id="overview-sub"></p>
+
+    <ul class="kpis" aria-label="Key figures for all tasks">
+      <li class="kpi"><span class="kpi-label">Open tasks</span><span class="kpi-value" id="kpi-open">0</span><span class="kpi-note">Not yet done</span></li>
+      <li class="kpi"><span class="kpi-label">Completed</span><span class="kpi-value" id="kpi-done">0</span><span class="kpi-note" id="kpi-done-note">0% of all tasks</span></li>
+      <li class="kpi" id="kpi-blocked-tile"><span class="kpi-label">Blocked</span><span class="kpi-value" id="kpi-blocked">0</span><span class="kpi-note">Waiting on a dependency</span></li>
+      <li class="kpi" id="kpi-overdue-tile"><span class="kpi-label">Overdue</span><span class="kpi-value" id="kpi-overdue">0</span><span class="kpi-note">Past due, not done</span></li>
+      <li class="kpi" id="kpi-critical-tile"><span class="kpi-label">Critical open</span><span class="kpi-value" id="kpi-critical">0</span><span class="kpi-note">Highest priority</span></li>
+    </ul>
+
+    <div class="overview-grid">
+      <section class="panel" aria-labelledby="mix-title">
+        <h3 class="section-title" id="mix-title">Where the work sits</h3>
+        <div class="mix-bar" id="mix-bar" role="img" aria-label="">
+          <span data-seg="Backlog"></span><span data-seg="In Progress"></span><span data-seg="Blocked"></span><span data-seg="Done"></span>
+        </div>
+        <ul class="mix-legend">
+          <li><span class="swatch" data-seg="Backlog"></span>Backlog <strong id="mix-backlog">0</strong><span class="pct" id="mix-backlog-pct">0%</span></li>
+          <li><span class="swatch" data-seg="In Progress"></span>In progress <strong id="mix-inprogress">0</strong><span class="pct" id="mix-inprogress-pct">0%</span></li>
+          <li><span class="swatch" data-seg="Blocked"></span>Blocked <strong id="mix-blocked">0</strong><span class="pct" id="mix-blocked-pct">0%</span></li>
+          <li><span class="swatch" data-seg="Done"></span>Done <strong id="mix-done">0</strong><span class="pct" id="mix-done-pct">0%</span></li>
+        </ul>
+      </section>
+
+      <section class="panel" aria-labelledby="ws-title">
+        <h3 class="section-title" id="ws-title">Workstream health</h3>
+        <p class="section-note">Worst first. Select a workstream to show only its tasks on the board.</p>
+        <div class="table-wrap">
+          <table class="ws-table">
+            <thead>
+              <tr>
+                <th scope="col">Workstream</th>
+                <th scope="col" class="num">Open</th>
+                <th scope="col" class="num">Blocked</th>
+                <th scope="col" class="num">Overdue</th>
+                <th scope="col">Next due</th>
+                <th scope="col">Health</th>
+              </tr>
+            </thead>
+            <tbody id="ws-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </section>
+
   <!-- =========================================================
        FILTER BAR — pure client-side filtering over state.tasks
        ========================================================= -->
-  <section class="filters" aria-labelledby="filters-heading">
-    <h2 id="filters-heading">Filters</h2>
+  <div class="board-head">
+    <h2 class="section-title" id="board-heading" tabindex="-1">Task board</h2>
+    <p class="filter-status" id="filter-status" aria-live="polite"></p>
+  </div>
 
+  <section class="filters" aria-label="Filters">
     <div class="filter-field">
-      <label for="filter-project">Project / Workstream</label>
+      <label for="filter-project">Workstream</label>
       <select id="filter-project">
-        <option value="">All projects</option>
+        <option value="">All workstreams</option>
       </select>
     </div>
 
     <div class="filter-field">
       <label for="filter-assignee">Assignee contains</label>
-      <input type="search" id="filter-assignee" placeholder="e.g. Priya" autocomplete="off">
+      <input type="search" id="filter-assignee" placeholder="e.g. Priya" autocomplete="off" maxlength="60">
     </div>
 
     <div class="filter-field">
@@ -590,16 +883,15 @@ main { padding: var(--space-5); }
     </div>
 
     <button type="button" class="btn btn-ghost" id="clear-filters">Clear filters</button>
-    <p class="filter-status" id="filter-status" aria-live="polite"></p>
   </section>
 
   <!-- =========================================================
        KANBAN BOARD — four fixed columns, cards rendered by renderBoard()
        ========================================================= -->
-  <section class="board" id="board" aria-label="Kanban board">
+  <section class="board" id="board" aria-labelledby="board-heading">
     <section class="column" data-status="Backlog" aria-labelledby="col-h-backlog">
       <div class="column-header">
-        <h2 id="col-h-backlog">Backlog <span class="column-sub">Logged, not yet scheduled</span></h2>
+        <h3 id="col-h-backlog">Backlog <span class="column-sub">Logged, not yet scheduled</span></h3>
         <span class="count-badge" data-count="Backlog">0</span>
       </div>
       <div class="card-list" data-list="Backlog" tabindex="-1"></div>
@@ -607,7 +899,7 @@ main { padding: var(--space-5); }
 
     <section class="column" data-status="In Progress" aria-labelledby="col-h-inprogress">
       <div class="column-header">
-        <h2 id="col-h-inprogress">In Progress <span class="column-sub">Actively being worked</span></h2>
+        <h3 id="col-h-inprogress">In Progress <span class="column-sub">Actively being worked</span></h3>
         <span class="count-badge" data-count="In Progress">0</span>
       </div>
       <div class="card-list" data-list="In Progress" tabindex="-1"></div>
@@ -615,7 +907,7 @@ main { padding: var(--space-5); }
 
     <section class="column" data-status="Blocked" aria-labelledby="col-h-blocked">
       <div class="column-header">
-        <h2 id="col-h-blocked">Blocked <span class="column-sub">Waiting on dependency, vendor or approval</span></h2>
+        <h3 id="col-h-blocked">Blocked <span class="column-sub">Waiting on dependency, vendor or approval</span></h3>
         <span class="count-badge" data-count="Blocked">0</span>
       </div>
       <div class="card-list" data-list="Blocked" tabindex="-1"></div>
@@ -623,7 +915,7 @@ main { padding: var(--space-5); }
 
     <section class="column" data-status="Done" aria-labelledby="col-h-done">
       <div class="column-header">
-        <h2 id="col-h-done">Done <span class="column-sub">Completed / closed</span></h2>
+        <h3 id="col-h-done">Done <span class="column-sub">Completed or closed</span></h3>
         <span class="count-badge" data-count="Done">0</span>
       </div>
       <div class="card-list" data-list="Done" tabindex="-1"></div>
@@ -637,28 +929,30 @@ main { padding: var(--space-5); }
 <div class="backdrop" id="drawer-backdrop" hidden></div>
 <div class="drawer" id="add-task-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden>
   <div class="drawer-header">
-    <h2 id="drawer-title">Add Task</h2>
-    <button type="button" class="icon-btn" id="close-add-task" aria-label="Close Add Task panel">×</button>
+    <h2 id="drawer-title">Add task</h2>
+    <button type="button" class="icon-btn" id="close-add-task" aria-label="Close Add task panel">
+      <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
   </div>
 
-  <form class="task-form" id="task-form" novalidate>
+  <form class="task-form" id="task-form" novalidate autocomplete="off">
     <div class="field">
-      <label for="f-title">Task Title <span class="req" aria-hidden="true">*</span></label>
-      <input type="text" id="f-title" name="title" maxlength="80" required aria-describedby="f-title-hint f-title-error">
+      <label for="f-title">Task title <span class="req" aria-hidden="true">*</span></label>
+      <input type="text" id="f-title" name="title" maxlength="80" required spellcheck="true" aria-describedby="f-title-hint f-title-error">
       <p class="field-hint" id="f-title-hint"><span data-counter="f-title">0</span>/80</p>
       <p class="field-error" id="f-title-error"></p>
     </div>
 
     <div class="field">
       <label for="f-description">Description</label>
-      <textarea id="f-description" name="description" maxlength="500" aria-describedby="f-description-hint f-description-error"></textarea>
+      <textarea id="f-description" name="description" maxlength="500" spellcheck="true" aria-describedby="f-description-hint f-description-error"></textarea>
       <p class="field-hint" id="f-description-hint"><span data-counter="f-description">0</span>/500</p>
       <p class="field-error" id="f-description-error"></p>
     </div>
 
     <div class="form-row">
       <div class="field">
-        <label for="f-project">Project / Workstream <span class="req" aria-hidden="true">*</span></label>
+        <label for="f-project">Workstream <span class="req" aria-hidden="true">*</span></label>
         <select id="f-project" name="project" required aria-describedby="f-project-error">
           <option value="">Select…</option>
         </select>
@@ -676,7 +970,8 @@ main { padding: var(--space-5); }
 
     <div class="field">
       <label for="f-assignee">Assignee <span class="req" aria-hidden="true">*</span></label>
-      <input type="text" id="f-assignee" name="assignee" maxlength="60" required autocomplete="off" aria-describedby="f-assignee-error">
+      <input type="text" id="f-assignee" name="assignee" maxlength="60" required aria-describedby="f-assignee-hint f-assignee-error">
+      <p class="field-hint field-hint-left" id="f-assignee-hint">Letters, spaces, full stops, hyphens and apostrophes.</p>
       <p class="field-error" id="f-assignee-error"></p>
     </div>
 
@@ -695,7 +990,7 @@ main { padding: var(--space-5); }
     </div>
 
     <div class="field">
-      <label for="f-dueDate">Due Date <span class="req" aria-hidden="true">*</span></label>
+      <label for="f-dueDate">Due date <span class="req" aria-hidden="true">*</span></label>
       <input type="date" id="f-dueDate" name="dueDate" required aria-describedby="f-dueDate-error">
       <p class="field-error" id="f-dueDate-error"></p>
     </div>
@@ -704,7 +999,7 @@ main { padding: var(--space-5); }
 
     <div class="form-actions">
       <button type="button" class="btn btn-ghost" id="cancel-add-task">Close</button>
-      <button type="submit" class="btn btn-primary" id="submit-task">Add Task</button>
+      <button type="submit" class="btn btn-primary" id="submit-task">Add task</button>
     </div>
   </form>
 </div>
@@ -728,6 +1023,8 @@ main { padding: var(--space-5); }
 
   Until the placeholder is replaced, the app skips the network call.
   New cards are still added locally and a warning toast is shown.
+
+  Changing the script changes its CSP hash: regenerate it (CLAUDE.md).
   =========================================================
 -->
 <script>
@@ -738,27 +1035,36 @@ main { padding: var(--space-5); }
    ========================================================= */
 const FORMSUBMIT_ENDPOINT = "https://formsubmit.co/ajax/YOUR_EMAIL@example.com";
 const FORMSUBMIT_PLACEHOLDER = "YOUR_EMAIL@example.com";
+const FORMSUBMIT_ORIGIN_PREFIX = "https://formsubmit.co/ajax/";
 
-const STATUSES = ["Backlog", "In Progress", "Blocked", "Done"];
-const PROJECTS = [
+const STATUSES = Object.freeze(["Backlog", "In Progress", "Blocked", "Done"]);
+const PROJECTS = Object.freeze([
   "Core Banking Upgrade",
   "Digital Channels",
   "Cybersecurity Uplift",
   "Data & Analytics",
   "Infrastructure & Cloud",
   "Vendor Management",
-];
-const CATEGORIES = [
+]);
+const CATEGORIES = Object.freeze([
   "Application Development",
   "Infrastructure",
   "Cybersecurity",
   "Data",
   "Compliance",
   "Vendor",
-];
-const PRIORITIES = ["Critical", "High", "Medium", "Low"];
+]);
+const PRIORITIES = Object.freeze(["Critical", "High", "Medium", "Low"]);
 const TITLE_MAX = 80;
 const DESCRIPTION_MAX = 500;
+const ASSIGNEE_MAX = 60;
+/** Names: letters (any script), spaces, full stops, hyphens and apostrophes. */
+const ASSIGNEE_PATTERN = /^[\p{L}\p{M}][\p{L}\p{M} .'’-]*$/u;
+
+/* Abuse limits for the email notification (client-side, per page load). */
+const NOTIFY_COOLDOWN_MS = 15000;
+const NOTIFY_MAX_PER_SESSION = 20;
+const NOTIFY_TIMEOUT_MS = 10000;
 
 /* =========================================================
    2. STATE — the single source of truth (in memory only)
@@ -766,7 +1072,7 @@ const DESCRIPTION_MAX = 500;
 const state = {
   tasks: [],
   filters: { project: "", assignee: "", priority: "" },
-  ui: { openMoveId: null, confirmDeleteId: null, draggingId: null, sending: false },
+  ui: { openMoveId: null, confirmDeleteId: null, draggingId: null, sending: false, notifyCount: 0, lastNotifyAt: 0 },
 };
 let idCounter = 0;
 
@@ -782,6 +1088,19 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+/**
+ * Normalise free text: strip control / bidi-override characters and trim.
+ * Single-line values also collapse line breaks (keeps email subjects clean).
+ */
+function cleanText(value, { multiline = false } = {}) {
+  let s = String(value == null ? "" : value).normalize("NFC");
+  s = s.replace(/[‪-‮⁦-⁩‎‏]/g, "");
+  s = multiline
+    ? s.replace(/\r\n?/g, "\n").replace(/[\u0000-\u0009\u000B-\u001F\u007F]/g, "")
+    : s.replace(/[\u0000-\u001F\u007F]+/g, " ");
+  return s.trim();
 }
 
 /** Local-date ISO string (YYYY-MM-DD), avoiding UTC off-by-one issues. */
@@ -802,7 +1121,15 @@ function addDays(days) {
   return toISODate(d);
 }
 
-/** Human-friendly due date, e.g. "23 Sep 2026". */
+/** True for a real calendar date in YYYY-MM-DD form (rejects 2026-02-31). */
+function isValidISODate(iso) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
+}
+
+/** Human-friendly date, e.g. "23 Sep 2026". */
 function formatDate(iso) {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
@@ -823,6 +1150,14 @@ function findTask(id) {
 
 function cssAttr(value) {
   return window.CSS && CSS.escape ? CSS.escape(value) : String(value).replace(/"/g, '\\"');
+}
+
+function plural(n, word) {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
+function setText(id, value) {
+  document.getElementById(id).textContent = value;
 }
 
 /* =========================================================
@@ -861,11 +1196,13 @@ function hasActiveFilters() {
 }
 
 /* =========================================================
-   6. RENDERING — board, cards, summary
+   6. RENDERING — board, cards, portfolio overview
    ========================================================= */
+const ICON_DELETE = `<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+
 function renderCard(task) {
   const id = escapeHtml(task.id);
-  const prio = task.priority.toLowerCase();
+  const prio = PRIORITIES.includes(task.priority) ? task.priority.toLowerCase() : "low";
   const overdue = isOverdue(task);
   const moveOpen = state.ui.openMoveId === task.id;
   const confirming = state.ui.confirmDeleteId === task.id;
@@ -881,29 +1218,28 @@ function renderCard(task) {
 
   const confirm = confirming
     ? `<div class="confirm" role="group" aria-label="Confirm delete of ${id}">
-         <span>Delete?</span>
-         <button type="button" class="yes" data-action="delete-yes" data-id="${id}">Yes</button>
-         <button type="button" class="no" data-action="delete-no" data-id="${id}">No</button>
+         <span>Delete this task?</span>
+         <button type="button" class="yes" data-action="delete-yes" data-id="${id}">Delete</button>
+         <button type="button" class="no" data-action="delete-no" data-id="${id}">Keep</button>
        </div>`
     : "";
 
   return `
-    <article class="card prio-${escapeHtml(prio)}" draggable="true" data-id="${id}" aria-label="${id}: ${escapeHtml(task.title)}">
+    <article class="card prio-${escapeHtml(prio)}${overdue ? " is-overdue" : ""}" draggable="true" data-id="${id}" aria-label="${id}: ${escapeHtml(task.title)}">
       <div class="card-top">
-        <span class="card-id">${id}</span>
         <span class="pill">${escapeHtml(task.priority)}</span>
-        <button type="button" class="icon-btn" data-action="delete" data-id="${id}" aria-label="Delete task ${id}">×</button>
+        ${overdue ? `<span class="badge-overdue"><span aria-hidden="true">!</span> Overdue</span>` : ""}
+        <button type="button" class="icon-btn" data-action="delete" data-id="${id}" aria-label="Delete task ${id}">${ICON_DELETE}</button>
       </div>
-      <h3 class="card-title">${escapeHtml(task.title)}</h3>
+      <h4 class="card-title">${escapeHtml(task.title)}</h4>
       ${task.description ? `<p class="card-desc">${escapeHtml(task.description)}</p>` : ""}
       <dl class="card-meta">
-        <div><dt>Project</dt><dd>${escapeHtml(task.project)}</dd></div>
-        <div><dt>Assignee</dt><dd>${escapeHtml(task.assignee)}</dd></div>
-        <div><dt>Due</dt><dd><time datetime="${escapeHtml(task.dueDate)}">${escapeHtml(formatDate(task.dueDate))}</time>${
-          overdue ? ` <span class="badge-overdue"><span aria-hidden="true">⚠</span> Overdue</span>` : ""
-        }</dd></div>
+        <div><dt>Owner</dt><dd>${escapeHtml(task.assignee)}</dd></div>
+        <div><dt>Due</dt><dd><time datetime="${escapeHtml(task.dueDate)}"${overdue ? ` class="due-overdue"` : ""}>${escapeHtml(formatDate(task.dueDate))}</time></dd></div>
+        <div><dt>Workstream</dt><dd>${escapeHtml(task.project)}</dd></div>
       </dl>
       <div class="card-foot">
+        <span class="card-id">${id}</span>
         <span class="tag">${escapeHtml(task.category)}</span>
         <button type="button" class="move-btn" data-action="move-toggle" data-id="${id}"
           aria-expanded="${moveOpen}" aria-controls="move-menu-${id}" aria-label="Move task ${id} to another column">Move ▸</button>
@@ -913,14 +1249,110 @@ function renderCard(task) {
     </article>`;
 }
 
-function renderSummary() {
-  const count = (status) => state.tasks.filter((t) => t.status === status).length;
-  document.getElementById("sum-total").textContent = state.tasks.length;
-  document.getElementById("sum-backlog").textContent = count("Backlog");
-  document.getElementById("sum-inprogress").textContent = count("In Progress");
-  document.getElementById("sum-blocked").textContent = count("Blocked");
-  document.getElementById("sum-done").textContent = count("Done");
-  document.getElementById("sum-overdue").textContent = state.tasks.filter(isOverdue).length;
+const HEALTH = Object.freeze({
+  off:  { rank: 0, label: "Off track" },
+  risk: { rank: 1, label: "At risk" },
+  ok:   { rank: 2, label: "On track" },
+  idle: { rank: 3, label: "No open work" },
+});
+
+/** Per-workstream roll-up of open tasks, worst health first. */
+function workstreamHealth(openTasks) {
+  return PROJECTS.map((project) => {
+    const tasks = openTasks.filter((t) => t.project === project);
+    const overdue = tasks.filter(isOverdue);
+    const blocked = tasks.filter((t) => t.status === "Blocked");
+    const severe =
+      overdue.some((t) => t.priority === "Critical" || t.priority === "High") ||
+      blocked.some((t) => t.priority === "Critical");
+    let health = "ok";
+    if (!tasks.length) health = "idle";
+    else if (severe) health = "off";
+    else if (overdue.length || blocked.length) health = "risk";
+    const nextDue = tasks.filter((t) => !isOverdue(t)).map((t) => t.dueDate).sort()[0] || "";
+    return { project, open: tasks.length, blocked: blocked.length, overdue: overdue.length, nextDue, health };
+  }).sort((a, b) => HEALTH[a.health].rank - HEALTH[b.health].rank || b.overdue - a.overdue || a.project.localeCompare(b.project));
+}
+
+function renderWorkstreams(openTasks) {
+  const rows = workstreamHealth(openTasks);
+  document.getElementById("ws-body").innerHTML = rows.map((r) => {
+    const name = escapeHtml(r.project);
+    const pressed = state.filters.project === r.project;
+    return `<tr>
+      <th scope="row"><button type="button" class="link-btn" data-action="filter-project" data-project="${name}" aria-pressed="${pressed}">${name}</button></th>
+      <td class="num">${r.open}</td>
+      <td class="num${r.blocked ? " is-alert" : ""}">${r.blocked}</td>
+      <td class="num${r.overdue ? " is-alert" : ""}">${r.overdue}</td>
+      <td>${r.nextDue ? `<time datetime="${escapeHtml(r.nextDue)}">${escapeHtml(formatDate(r.nextDue))}</time>` : "—"}</td>
+      <td><span class="health health-${r.health}">${escapeHtml(HEALTH[r.health].label)}</span></td>
+    </tr>`;
+  }).join("");
+}
+
+function renderStatusMix() {
+  const total = state.tasks.length;
+  const keys = { "Backlog": "backlog", "In Progress": "inprogress", "Blocked": "blocked", "Done": "done" };
+  const parts = [];
+  STATUSES.forEach((status) => {
+    const n = state.tasks.filter((t) => t.status === status).length;
+    const pct = total ? Math.round((n / total) * 100) : 0;
+    setText(`mix-${keys[status]}`, n);
+    setText(`mix-${keys[status]}-pct`, `${pct}%`);
+    // Inline widths via CSSOM are permitted by the CSP (style attributes in markup are not).
+    document.querySelector(`#mix-bar [data-seg="${status}"]`).style.width = total ? `${(n / total) * 100}%` : "0";
+    parts.push(`${status} ${n}`);
+  });
+  document.getElementById("mix-bar").setAttribute("aria-label", `Tasks by status: ${parts.join(", ")}`);
+}
+
+/** Headline, KPIs, status mix and workstream table. Always counts ALL tasks. */
+function renderOverview() {
+  const tasks = state.tasks;
+  const open = tasks.filter((t) => t.status !== "Done");
+  const done = tasks.length - open.length;
+  const overdue = open.filter(isOverdue).length;
+  const blocked = open.filter((t) => t.status === "Blocked").length;
+  const critical = open.filter((t) => t.priority === "Critical").length;
+  const attention = open.filter((t) => t.status === "Blocked" || isOverdue(t)).length;
+  const donePct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+
+  let headline;
+  let sub;
+  if (!tasks.length) {
+    headline = "No tasks on the board yet";
+    sub = "Add a task to start tracking the portfolio.";
+  } else if (attention) {
+    headline = `${attention} of ${plural(open.length, "open task")} need${attention === 1 ? "s" : ""} attention`;
+    const reasons = [
+      overdue && `${overdue} overdue`,
+      blocked && `${blocked} blocked`,
+      critical && `${critical} critical still open`,
+    ].filter(Boolean);
+    sub = `${reasons.join(", ")}. ${donePct}% of all work is complete.`;
+    sub = sub.charAt(0).toUpperCase() + sub.slice(1);
+  } else if (open.length) {
+    headline = `All ${plural(open.length, "open task")} ${open.length === 1 ? "is" : "are"} on track`;
+    sub = `Nothing is blocked or overdue. ${donePct}% of all work is complete.`;
+  } else {
+    headline = "Every task is complete";
+    sub = `${plural(done, "task")} closed.`;
+  }
+  setText("overview-headline", headline);
+  setText("overview-sub", sub);
+
+  setText("kpi-open", open.length);
+  setText("kpi-done", done);
+  setText("kpi-done-note", `${donePct}% of all tasks`);
+  setText("kpi-blocked", blocked);
+  setText("kpi-overdue", overdue);
+  setText("kpi-critical", critical);
+  document.getElementById("kpi-blocked-tile").classList.toggle("kpi-alert", blocked > 0);
+  document.getElementById("kpi-overdue-tile").classList.toggle("kpi-alert", overdue > 0);
+  document.getElementById("kpi-critical-tile").classList.toggle("kpi-alert", critical > 0);
+
+  renderStatusMix();
+  renderWorkstreams(open);
 }
 
 /**
@@ -940,14 +1372,14 @@ function renderBoard(focusSelector) {
 
     const badge = document.querySelector(`[data-count="${status}"]`);
     badge.textContent = tasks.length;
-    badge.setAttribute("aria-label", `${tasks.length} task${tasks.length === 1 ? "" : "s"}`);
+    badge.setAttribute("aria-label", plural(tasks.length, "task"));
   });
 
-  document.getElementById("filter-status").textContent = hasActiveFilters()
-    ? `Showing ${visible.length} of ${state.tasks.length} tasks`
-    : `${state.tasks.length} tasks`;
+  setText("filter-status", hasActiveFilters()
+    ? `Showing ${visible.length} of ${plural(state.tasks.length, "task")}`
+    : `Showing all ${plural(state.tasks.length, "task")}`);
 
-  renderSummary();
+  renderOverview();
 
   if (focusSelector) {
     const el = document.querySelector(focusSelector);
@@ -961,11 +1393,11 @@ function renderBoard(focusSelector) {
 function addTask(data) {
   const task = {
     id: nextTaskId(),
-    title: data.title.trim(),
-    description: data.description.trim(),
+    title: cleanText(data.title),
+    description: cleanText(data.description, { multiline: true }),
     project: data.project,
     category: data.category,
-    assignee: data.assignee.trim(),
+    assignee: cleanText(data.assignee),
     priority: data.priority,
     dueDate: data.dueDate,
     status: data.status,
@@ -1003,12 +1435,18 @@ function deleteTask(id) {
   showToast(`${removed.id} deleted.`, "info");
 }
 
+function setProjectFilter(project) {
+  state.filters.project = PROJECTS.includes(project) ? project : "";
+  document.getElementById("filter-project").value = state.filters.project;
+  renderBoard();
+}
+
 /* =========================================================
    8. TOASTS
    ========================================================= */
 function showToast(message, type = "info") {
   const region = document.getElementById("toast-region");
-  const icons = { success: "✓", warning: "⚠", info: "ⓘ" };
+  const icons = { success: "✓", warning: "!", info: "i" };
   const toast = document.createElement("div");
   toast.className = `toast toast-${type}`;
   toast.innerHTML = `<span class="toast-icon" aria-hidden="true">${icons[type] || icons.info}</span><span>${escapeHtml(message)}</span>`;
@@ -1025,42 +1463,63 @@ function showToast(message, type = "info") {
    9. FORMSUBMIT — AJAX JSON notification (never breaks the board)
    ========================================================= */
 function isEndpointConfigured() {
-  return !FORMSUBMIT_ENDPOINT.includes(FORMSUBMIT_PLACEHOLDER);
+  return FORMSUBMIT_ENDPOINT.startsWith(FORMSUBMIT_ORIGIN_PREFIX) && !FORMSUBMIT_ENDPOINT.includes(FORMSUBMIT_PLACEHOLDER);
+}
+
+/** Client-side rate limit so the form cannot be used to flood the inbox. */
+function notifyBlockedReason() {
+  if (state.ui.notifyCount >= NOTIFY_MAX_PER_SESSION) return "session notification limit reached";
+  if (Date.now() - state.ui.lastNotifyAt < NOTIFY_COOLDOWN_MS) return "notification cooldown active";
+  return "";
 }
 
 async function notifyNewTask(task) {
-  const res = await fetch(FORMSUBMIT_ENDPOINT, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({
-      _subject: `[UOB IT PMO] New task ${task.id}: ${task.title}`,
-      _template: "table",
-      _captcha: "false",
-      "Task ID": task.id,
-      Title: task.title,
-      Description: task.description,
-      Project: task.project,
-      Category: task.category,
-      Assignee: task.assignee,
-      Priority: task.priority,
-      "Due Date": task.dueDate,
-      Status: task.status,
-      "Submitted At": new Date().toISOString(),
-    }),
-  });
-  if (!res.ok) throw new Error(`FormSubmit failed: ${res.status}`);
-  const json = await res.json();
-  // FormSubmit can return HTTP 200 with success:"false" (e.g. activation pending).
-  if (json && (json.success === false || json.success === "false")) {
-    throw new Error(`FormSubmit rejected: ${json.message || "unknown reason"}`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), NOTIFY_TIMEOUT_MS);
+  state.ui.notifyCount += 1;
+  state.ui.lastNotifyAt = Date.now();
+  try {
+    const res = await fetch(FORMSUBMIT_ENDPOINT, {
+      method: "POST",
+      mode: "cors",
+      credentials: "omit",
+      cache: "no-store",
+      redirect: "error",
+      referrerPolicy: "strict-origin",
+      signal: controller.signal,
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        _subject: `[UOB IT PMO] New task ${task.id}: ${cleanText(task.title)}`,
+        _template: "table",
+        _captcha: "false",
+        "Task ID": task.id,
+        Title: task.title,
+        Description: task.description,
+        Project: task.project,
+        Category: task.category,
+        Assignee: task.assignee,
+        Priority: task.priority,
+        "Due Date": task.dueDate,
+        Status: task.status,
+        "Submitted At": new Date().toISOString(),
+      }),
+    });
+    if (!res.ok) throw new Error(`FormSubmit failed: ${res.status}`);
+    const json = await res.json();
+    // FormSubmit can return HTTP 200 with success:"false" (e.g. activation pending).
+    if (json && (json.success === false || json.success === "false")) {
+      throw new Error(`FormSubmit rejected: ${json.message || "unknown reason"}`);
+    }
+    return json;
+  } finally {
+    clearTimeout(timer);
   }
-  return json;
 }
 
 /* =========================================================
    10. FORM — read, validate, errors, submit
    ========================================================= */
-const FIELD_IDS = {
+const FIELD_IDS = Object.freeze({
   title: "f-title",
   description: "f-description",
   project: "f-project",
@@ -1069,7 +1528,7 @@ const FIELD_IDS = {
   priority: "f-priority",
   dueDate: "f-dueDate",
   status: "f-status",
-};
+});
 
 function readForm() {
   const data = {};
@@ -1081,22 +1540,27 @@ function readForm() {
 
 function validateForm(data) {
   const errors = {};
-  const title = data.title.trim();
-  if (!title) errors.title = "Task title is required.";
-  else if (title.length > TITLE_MAX) errors.title = `Title must be ${TITLE_MAX} characters or fewer.`;
+  const title = cleanText(data.title);
+  if (!title) errors.title = "Enter a task title.";
+  else if (title.length > TITLE_MAX) errors.title = `Keep the title to ${TITLE_MAX} characters or fewer.`;
 
-  if (data.description.trim().length > DESCRIPTION_MAX) {
-    errors.description = `Description must be ${DESCRIPTION_MAX} characters or fewer.`;
+  if (cleanText(data.description, { multiline: true }).length > DESCRIPTION_MAX) {
+    errors.description = `Keep the description to ${DESCRIPTION_MAX} characters or fewer.`;
   }
-  if (!PROJECTS.includes(data.project)) errors.project = "Select a project / workstream.";
+  if (!PROJECTS.includes(data.project)) errors.project = "Select a workstream.";
   if (!CATEGORIES.includes(data.category)) errors.category = "Select a category.";
-  if (!data.assignee.trim()) errors.assignee = "Assignee is required.";
+
+  const assignee = cleanText(data.assignee);
+  if (!assignee) errors.assignee = "Enter who owns this task.";
+  else if (assignee.length > ASSIGNEE_MAX) errors.assignee = `Keep the name to ${ASSIGNEE_MAX} characters or fewer.`;
+  else if (!ASSIGNEE_PATTERN.test(assignee)) errors.assignee = "Use letters, spaces, full stops, hyphens or apostrophes only.";
+
   if (!PRIORITIES.includes(data.priority)) errors.priority = "Select a priority.";
   if (!STATUSES.includes(data.status)) errors.status = "Select a status.";
 
-  if (!data.dueDate) errors.dueDate = "Due date is required.";
-  else if (!/^\d{4}-\d{2}-\d{2}$/.test(data.dueDate)) errors.dueDate = "Enter a valid date.";
-  else if (data.dueDate < todayISO()) errors.dueDate = "Due date cannot be in the past.";
+  if (!data.dueDate) errors.dueDate = "Choose a due date.";
+  else if (!isValidISODate(data.dueDate)) errors.dueDate = "Enter a real date.";
+  else if (data.dueDate < todayISO()) errors.dueDate = "Choose today or a later date.";
 
   return errors;
 }
@@ -1141,7 +1605,7 @@ function setSending(sending) {
   const btn = document.getElementById("submit-task");
   btn.disabled = sending;
   btn.setAttribute("aria-busy", String(sending));
-  btn.textContent = sending ? "Sending…" : "Add Task";
+  btn.textContent = sending ? "Sending…" : "Add task";
 }
 
 async function handleSubmit(event) {
@@ -1165,11 +1629,13 @@ async function handleSubmit(event) {
   // Email notification runs in parallel. A failure here never affects the board.
   setSending(true);
   try {
-    if (!isEndpointConfigured()) throw new Error("FORMSUBMIT_ENDPOINT still uses the placeholder address");
+    if (!isEndpointConfigured()) throw new Error("FORMSUBMIT_ENDPOINT is not a configured FormSubmit AJAX URL");
+    const blocked = notifyBlockedReason();
+    if (blocked) throw new Error(`Notification skipped: ${blocked}`);
     await notifyNewTask(task);
     showToast(`Email notification sent for ${task.id}.`, "info");
   } catch (err) {
-    console.warn("[UOB IT PMO] Notification failed:", err);
+    console.warn("[UOB IT PMO] Notification failed:", err && err.message ? err.message : err);
     showToast("Card added locally — email notification failed", "warning");
   } finally {
     setSending(false);
@@ -1251,6 +1717,17 @@ function handleBoardClick(event) {
   }
 }
 
+/** Workstream table: selecting a name filters the board to it (select again to clear). */
+function handleWorkstreamClick(event) {
+  const btn = event.target.closest('[data-action="filter-project"]');
+  if (!btn) return;
+  const project = btn.dataset.project;
+  setProjectFilter(state.filters.project === project ? "" : project);
+  const heading = document.getElementById("board-heading");
+  heading.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  heading.focus({ preventScroll: true });
+}
+
 function bindDragAndDrop() {
   const board = document.getElementById("board");
 
@@ -1283,9 +1760,10 @@ function bindDragAndDrop() {
     column.addEventListener("drop", (e) => {
       e.preventDefault();
       column.classList.remove("drag-over");
-      const id = e.dataTransfer.getData("text/plain") || state.ui.draggingId;
+      // Only accept drops that started on this board (ignore text dragged in from elsewhere).
+      const id = state.ui.draggingId;
       state.ui.draggingId = null;
-      if (id) moveTask(id, column.dataset.status);
+      if (id && findTask(id)) moveTask(id, column.dataset.status);
     });
   });
 }
@@ -1295,9 +1773,12 @@ function bindFilters() {
   const assignee = document.getElementById("filter-assignee");
   const priority = document.getElementById("filter-priority");
 
-  project.addEventListener("change", () => { state.filters.project = project.value; renderBoard(); });
-  priority.addEventListener("change", () => { state.filters.priority = priority.value; renderBoard(); });
-  assignee.addEventListener("input", () => { state.filters.assignee = assignee.value; renderBoard(); });
+  project.addEventListener("change", () => setProjectFilter(project.value));
+  priority.addEventListener("change", () => {
+    state.filters.priority = PRIORITIES.includes(priority.value) ? priority.value : "";
+    renderBoard();
+  });
+  assignee.addEventListener("input", () => { state.filters.assignee = assignee.value.slice(0, ASSIGNEE_MAX); renderBoard(); });
 
   document.getElementById("clear-filters").addEventListener("click", () => {
     state.filters = { project: "", assignee: "", priority: "" };
@@ -1339,6 +1820,32 @@ function handleOutsideClick(event) {
 /* =========================================================
    13. INIT
    ========================================================= */
+
+/**
+ * Clickjacking guard. A meta CSP cannot set frame-ancestors, so refuse to run inside a frame
+ * and offer a link that opens the board in its own tab instead.
+ */
+function isFramed() {
+  try { return window.self !== window.top; } catch (e) { return true; }
+}
+
+function showFrameWarning() {
+  const box = document.createElement("main");
+  box.className = "frame-warning";
+  const h = document.createElement("h1");
+  h.textContent = "Open this board in its own tab";
+  const p = document.createElement("p");
+  p.textContent = "For security, this board does not run inside another page. ";
+  const a = document.createElement("a");
+  a.href = window.location.href;
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  a.textContent = "Open the board";
+  p.appendChild(a);
+  box.append(h, p);
+  document.body.replaceChildren(box);
+}
+
 function fillSelect(select, options) {
   select.insertAdjacentHTML(
     "beforeend",
@@ -1347,6 +1854,15 @@ function fillSelect(select, options) {
 }
 
 function init() {
+  if (isFramed()) {
+    showFrameWarning();
+    return;
+  }
+
+  const asOf = document.getElementById("as-of-date");
+  asOf.dateTime = todayISO();
+  asOf.textContent = formatDate(todayISO());
+
   fillSelect(document.getElementById("filter-project"), PROJECTS);
   fillSelect(document.getElementById("filter-priority"), PRIORITIES);
   fillSelect(document.getElementById("f-project"), PROJECTS);
@@ -1356,6 +1872,7 @@ function init() {
   resetForm();
 
   document.getElementById("board").addEventListener("click", handleBoardClick);
+  document.getElementById("ws-body").addEventListener("click", handleWorkstreamClick);
   document.addEventListener("click", handleOutsideClick, true);
   document.addEventListener("keydown", handleGlobalKeydown);
   bindDragAndDrop();

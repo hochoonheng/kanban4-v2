@@ -14,8 +14,10 @@ Run it by opening `index.html` directly in a browser (`file://`). No server is n
 - **Keep it a single file.** Do not split it into separate CSS/JS files.
 - **No persistence.** Do not use localStorage, sessionStorage, IndexedDB, cookies or any other storage API. A refresh deliberately resets the board to the seed data, and the header note says so.
 - **FormSubmit is the only backend.** Calls go through `fetch` to the AJAX endpoint and must never navigate the page. A failed call must never break the board.
-- **No official branding.** Do not use a real UOB logo or trademark, or imitate an official system. Keep the text wordmark and the corporate blue palette.
-- **CSS:** all colours and spacing come from custom properties on `:root`. No `!important`.
+- **No official branding.** Do not use a real UOB logo or trademark, or imitate an official system. Keep the text wordmark and the orange light palette (v2 redesign; orange-700 `#c2410c` is the only orange used for text, so it keeps AA contrast).
+- **CSS:** all colours and spacing come from custom properties on `:root`. No `!important`. No `style="…"` attributes in markup (the CSP blocks them); set styles through classes, or `el.style` from JS.
+- **Content Security Policy:** the `<meta http-equiv="Content-Security-Policy">` tag allows only the sha256 hashes of the one inline `<style>` and one inline `<script>`. **After any edit to either block, run `node tools/update-csp.js`**, or the browser blocks it and the page renders unstyled and inert. Both tags must start at the beginning of a line. The tool is not published.
+- **Security hardening (keep):** `referrer` and `robots noindex` meta tags; a clickjacking guard (`isFramed()`) because a meta CSP cannot set `frame-ancestors`; `cleanText()` strips control and bidi-override characters from input; the assignee has a character allowlist; the `fetch` uses `credentials: "omit"`, `redirect: "error"` and a timeout; notifications are rate-limited (`NOTIFY_COOLDOWN_MS`, `NOTIFY_MAX_PER_SESSION`).
 - **Accessibility:** every input has a `<label for>`, icon-only buttons have an `aria-label`, and focus rings stay visible. Colour is never the only signal: priority pills and the Overdue badge carry text.
 
 ## Script architecture
@@ -23,18 +25,19 @@ Run it by opening `index.html` directly in a browser (`file://`). No server is n
 The `<script>` is split into numbered, commented sections: CONFIG, STATE, HELPERS, SEED, FILTERING, RENDERING, ACTIONS, TOASTS, FORMSUBMIT, FORM, DRAWER, EVENTS and INIT.
 
 - **Single source of truth:** `state = { tasks, filters, ui }`.
-  - `ui` holds transient view state: `openMoveId`, `confirmDeleteId`, `draggingId` and `sending`.
+  - `ui` holds transient view state: `openMoveId`, `confirmDeleteId`, `draggingId`, `sending`, and the notification rate-limit counters `notifyCount` and `lastNotifyAt`.
   - Every change mutates `state` and then calls `renderBoard()`.
 - **Rendering:**
-  - `renderBoard()` is the only function that writes card DOM. It rebuilds each column's `innerHTML` from `applyFilters(state.tasks)` using `renderCard()`, then calls `renderSummary()`.
+  - `renderBoard()` is the only function that writes card DOM. It rebuilds each column's `innerHTML` from `applyFilters(state.tasks)` using `renderCard()`, then calls `renderOverview()`. That function renders the portfolio overview: the headline sentence, the KPI strip, the status-mix bar and the workstream health table (`workstreamHealth()` ranks Off track, At risk, On track, No open work).
   - Do not patch card DOM anywhere else.
   - `renderBoard(focusSelector)` re-focuses an element after a render. This is how keyboard users keep their place after Move, Delete or Esc.
 - **Escaping:** every value interpolated into HTML goes through `escapeHtml()`.
 - **Event handling:**
   - Clicks inside the board go through one delegated handler, `handleBoardClick`, which switches on `data-action`: `move-toggle`, `move-to`, `delete`, `delete-yes` and `delete-no`.
+  - The workstream table has its own delegated handler, `handleWorkstreamClick` (`data-action="filter-project"`). It toggles the project filter and moves focus to the board heading.
   - Drag and drop uses the native HTML5 events, bound in `bindDragAndDrop()`.
 - **Summary vs column counts:**
-  - The header summary counts all tasks.
+  - The portfolio overview counts all tasks.
   - The column badges count only the filtered tasks.
 - **Dates:**
   - Stored as local `YYYY-MM-DD` strings and compared as strings. `todayISO()` avoids UTC off-by-one errors.
@@ -53,13 +56,14 @@ The `<script>` is split into numbered, commented sections: CONFIG, STATE, HELPER
 - **Placeholder:** while the endpoint still contains the `YOUR_EMAIL@example.com` placeholder, `isEndpointConfigured()` skips the network call and the warning toast appears.
 - **Activation:** FormSubmit needs a one-time activation. The first submission sends a confirmation email, and nothing is delivered until the link in it is clicked.
 - **Error handling:** `notifyNewTask()` also treats a 200 response with `success: "false"` as a failure.
+- **Endpoint allowlist:** `isEndpointConfigured()` also requires the endpoint to start with `https://formsubmit.co/ajax/`, matching the CSP `connect-src`.
 - **`file://` origin:** requests from a `file://` page send `Origin: null` and may be rejected. Serving the file over http(s) is more reliable for real email delivery.
 
 ## Verifying changes
 
 There are no automated tests. To check a change:
 
-1. Open the file in the browser pane.
+1. Run `node tools/update-csp.js` if the style or script changed, then serve the folder over http (e.g. `npx http-server . -p 8765`) and open it. Browser previews that re-serialise the file can break the CSP hashes.
 2. Drive the page by clicking, or with JS that calls the global functions such as `state`, `moveTask()` and `requestSubmit()` on `#task-form`.
-3. Check the console for errors.
+3. Check the console for errors, especially CSP violations.
 4. Check the layout below 768px, where the columns stack to one.

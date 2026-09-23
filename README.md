@@ -1,38 +1,55 @@
-# kanban4 — IT PMO Project Kanban (Demo)
+# kanban4 v2 — IT PMO Portfolio Board (Demo)
 
-A single-file Kanban board for tracking IT project tasks, built for internal demo and training use. It is not an official system and carries no official branding.
+A single-file project portfolio board for tracking IT project tasks, built for internal demo and training use. Version 2 is redesigned for senior-management reading: a plain-English status headline, key figures and workstream health sit above the Kanban board, in a light orange theme. It is not an official system and carries no official branding.
 
-**Live demo:** https://hochoonheng.github.io/kanban4/
+**Live demo:** https://hochoonheng.github.io/kanban4-v2/
 
-![Kanban board with Backlog, In Progress, Blocked and Done columns](docs/screenshot.png)
+![Portfolio board with status headline, key figures, workstream health table and Kanban columns](docs/screenshot.png)
 
 ## Features
 
+- **Portfolio overview** (counts every task, ignoring filters)
+  - Headline that says how many open tasks need attention and why (overdue, blocked, critical)
+  - Key figures: open, completed (with % done), blocked, overdue, critical open
+  - "Where the work sits" status-mix bar with counts and percentages
+  - Workstream health table, worst first, rated **Off track**, **At risk** or **On track** in text as well as colour. Select a workstream to filter the board to it.
 - Four columns: **Backlog**, **In Progress**, **Blocked** and **Done**
-- Add tasks from a slide-out form with title, description, project/workstream, category, assignee, priority, status and due date, with inline validation
+- Add tasks from a slide-out form with title, description, workstream, category, assignee, priority, status and due date, with inline validation
 - Move cards by drag and drop, or with the keyboard-friendly **Move ▸** menu
-- Delete cards with an inline Yes/No confirmation
-- Filter by project, assignee and priority; column badges show the filtered counts
-- Header summary of all tasks by status, plus an overdue count
+- Delete cards with an inline confirmation
+- Filter by workstream, assignee and priority; column badges show the filtered counts
 - Priority pills and an **Overdue** badge that use text as well as colour
 - Optional email notification for each new task via [FormSubmit](https://formsubmit.co/)
-- Responsive layout that stacks to one column below 768px
+- Responsive layout (two columns below 1100px, one below 768px) and a print stylesheet for status packs
 - Accessible: labelled inputs, visible focus rings, `aria-live` announcements, Esc closes menus and the form
 
 ## Run locally
 
-Open `index.html` in any modern browser. There is no build step, server or dependency.
+Serve the folder over http and open `index.html`, for example:
 
-The board starts with seed data dated relative to today. Nothing is saved: refreshing the page resets the board (this is by design).
+```bash
+npx http-server . -p 8765
+```
+
+Opening the file directly (`file://`) also works in most browsers. The board starts with seed data dated relative to today. Nothing is saved: refreshing the page resets the board (this is by design).
 
 ## Email notifications
 
 1. In `index.html`, set `FORMSUBMIT_ENDPOINT` to `https://formsubmit.co/ajax/<your-address>`.
-2. Add a task. FormSubmit sends a one-time activation email; click the link in it. Nothing is delivered until you do.
+2. Run `node tools/update-csp.js` (the script changed, so its CSP hash must be updated).
+3. Add a task. FormSubmit sends a one-time activation email; click the link in it. Nothing is delivered until you do.
 
-While the endpoint still holds the `YOUR_EMAIL@example.com` placeholder, no request is sent and the board shows a warning toast. A failed notification never breaks the board — the card is still added locally.
+While the endpoint still holds the `YOUR_EMAIL@example.com` placeholder, no request is sent and the board shows a warning toast. A failed notification never breaks the board — the card is still added locally. Notifications are limited to one every 15 seconds and 20 per page load.
 
-Pages opened from `file://` send `Origin: null`, which FormSubmit may reject. Use the GitHub Pages site (or any http(s) server) for reliable delivery.
+## Editing
+
+The page has a strict Content Security Policy that allows only the exact inline style and script. **After editing the `<style>` or `<script>` block, run:**
+
+```bash
+node tools/update-csp.js
+```
+
+Otherwise the browser blocks the edited block and the page appears unstyled and inert.
 
 ## Deployment
 
@@ -42,8 +59,14 @@ Every push to `main` deploys the site to GitHub Pages through [`.github/workflow
 
 - Vanilla HTML, CSS and JavaScript in one file — no frameworks, libraries, CDNs or web fonts
 - All colours and spacing come from CSS custom properties
-- All user input is HTML-escaped before rendering
 
 ## Security
+
+- **Content Security Policy** (meta tag): `default-src 'none'`, with the inline style and script allowed by sha256 hash only, `connect-src` limited to FormSubmit, and `base-uri`, `form-action` and `object-src` locked down
+- `strict-origin` referrer policy and `noindex, nofollow`
+- Clickjacking guard: the board will not run inside a frame
+- All user input is HTML-escaped before rendering; control and bidi-override characters are stripped; assignee names use a character allowlist; dates must be real calendar dates
+- Hardened `fetch`: endpoint allowlist, no credentials, no redirects, 10-second timeout, client-side rate limit
+- No storage APIs and no third-party code
 
 The repository is scanned for secrets, personal data and unsafe code before each publish. Please report any security issue by opening a GitHub issue (without including sensitive details) or contacting the repository owner.
