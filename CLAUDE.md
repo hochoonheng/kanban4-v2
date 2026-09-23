@@ -22,10 +22,10 @@ Run it by opening `index.html` directly in a browser (`file://`). No server is n
 
 ## Script architecture
 
-The `<script>` is split into numbered, commented sections: CONFIG, STATE, HELPERS, SEED, FILTERING, RENDERING, ACTIONS, TOASTS, FORMSUBMIT, FORM, DRAWER, EVENTS and INIT.
+The `<script>` is split into numbered, commented sections: CONFIG, STATE, HELPERS, SEED, FILTERING, RENDERING, ACTIONS, TOASTS, FORMSUBMIT, FORM, DRAWER, HELP PROMPT, EVENTS and INIT.
 
 - **Single source of truth:** `state = { tasks, filters, ui }`.
-  - `ui` holds transient view state: `openMoveId`, `confirmDeleteId`, `draggingId`, `sending`, and the notification rate-limit counters `notifyCount` and `lastNotifyAt`.
+  - `ui` holds transient view state: `openMoveId`, `confirmDeleteId`, `draggingId`, `sending`, the notification rate-limit counters `notifyCount` and `lastNotifyAt`, and `helpShown`.
   - Every change mutates `state` and then calls `renderBoard()`.
 - **Rendering:**
   - `renderBoard()` is the only function that writes card DOM. It rebuilds each column's `innerHTML` from `applyFilters(state.tasks)` using `renderCard()`, then calls `renderOverview()`. That function renders the portfolio overview: the headline sentence, the KPI strip, the status-mix bar and the workstream health table (`workstreamHealth()` ranks Off track, At risk, On track, No open work).
@@ -49,6 +49,12 @@ The `<script>` is split into numbered, commented sections: CONFIG, STATE, HELPER
   3. Show the success toast.
   4. Call `notifyNewTask()` inside try/catch. On failure, show the warning toast "Card added locally — email notification failed".
   - The submit button shows "Sending…" while the request is in flight.
+
+## Help prompt
+
+- After `HELP_PROMPT_DELAY_MS` (10 s) of the tab being visible, a native `<dialog>` (`#help-dialog`) thanks the visitor and gives the IT support hotline `IT_SUPPORT_HOTLINE` (12345678) with a `tel:` call button. Both constants are in CONFIG.
+- It shows once per page load (no storage, so a refresh shows it again). Hidden-tab time does not count, and if it comes due while the Add task form is open it waits until `closeDrawer()`.
+- This is page code, not a Claude Code hook: `.claude/hooks` only runs on the developer machine and is never deployed.
 
 ## FormSubmit config
 
