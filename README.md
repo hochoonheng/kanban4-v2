@@ -43,6 +43,12 @@ Opening the file directly (`file://`) also works in most browsers. The board sta
 
 While the endpoint still holds the `YOUR_EMAIL@example.com` placeholder, no request is sent and the board shows a warning toast. A failed notification never breaks the board — the card is still added locally. Notifications are limited to one every 15 seconds and 20 per page load.
 
+## Visit alerts
+
+The page can email IT support when someone stays on it for 10 seconds or more, with the page link and non-personal details (page title, time, board status, referring site, language, screen size, device type). It is **off** until you set `VISIT_ALERT_ENDPOINT` in `index.html` to `https://formsubmit.co/ajax/<alerts-inbox>` and run `node tools/update-csp.js`. The address is visible in the public page source. The first alert triggers FormSubmit's one-time activation email. When alerts are on, the demo banner tells visitors. Automated browsers and visitors using Global Privacy Control are never reported.
+
+In Claude Code, the `it-support` agent (`.claude/agents/it-support.md`) checks the live site and alert setup, and summarises alert emails you paste in.
+
 ## Editing
 
 The page has a strict Content Security Policy that allows only the exact inline style and script. **After editing the `<style>` or `<script>` block, run:**

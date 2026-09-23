@@ -9,7 +9,7 @@
     and fetch() calls to FormSubmit. Hashes are regenerated whenever the style or script changes
     (see CLAUDE.md → "Content Security Policy").
 -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'sha256-8D0uaz33yxaIqkyAn1RGlmckWls2arXNoSvKW7kRny4='; script-src 'sha256-dB2AGbRY48iRzMXoXycNOImwrTBHehQCIik5pwGF5W0='; img-src data:; connect-src https://formsubmit.co; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'sha256-8D0uaz33yxaIqkyAn1RGlmckWls2arXNoSvKW7kRny4='; script-src 'sha256-feUBh2WJNMLm62LUJ2xZEvTTzV7V0+tXdRHSUZLeTNY='; img-src data:; connect-src https://formsubmit.co; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light">
@@ -875,7 +875,7 @@ main { padding: var(--space-6) 0 calc(var(--fab-size) + var(--space-6)); }
   <div class="demo-bar">
     <p class="wrap demo-note">
       <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 7v4M8 4.5v.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-      <span>Internal demo and training tool. Changes are held in memory only. Refreshing the page resets the board to the demo data.</span>
+      <span>Internal demo and training tool. Changes are held in memory only. Refreshing the page resets the board to the demo data.<span id="visit-notice" hidden> Visits of 10 seconds or more are reported to IT support (page and browser details only, no personal data).</span></span>
     </p>
   </div>
 </header>
@@ -1182,6 +1182,16 @@ const NOTIFY_TIMEOUT_MS = 10000;
 const HELP_PROMPT_DELAY_MS = 10000;
 const IT_SUPPORT_HOTLINE = "12345678";
 
+/*
+  Visit alert: after VISIT_ALERT_AFTER_MS of visible time, email IT support the page link and
+  non-personal page/browser details, once per page load. Uses FormSubmit like task emails do.
+  Replace the placeholder with the alerts inbox (it is public in the page source), then run
+  node tools/update-csp.js. While the placeholder is in place nothing is sent and no notice shows.
+*/
+const VISIT_ALERT_ENDPOINT = "https://formsubmit.co/ajax/YOUR_ALERTS_EMAIL@example.com";
+const VISIT_ALERT_PLACEHOLDER = "YOUR_ALERTS_EMAIL@example.com";
+const VISIT_ALERT_AFTER_MS = 10000;
+
 /* WhatsApp support chat: international number without "+" or spaces, as wa.me expects. */
 const WHATSAPP_NUMBER = "6512345678";
 const WHATSAPP_DISPLAY = "+65 1234 5678";
@@ -1203,7 +1213,7 @@ const SUPPORT_QUERIES = Object.freeze([
 const state = {
   tasks: [],
   filters: { project: "", assignee: "", priority: "" },
-  ui: { openMoveId: null, confirmDeleteId: null, draggingId: null, sending: false, notifyCount: 0, lastNotifyAt: 0, helpShown: false },
+  ui: { openMoveId: null, confirmDeleteId: null, draggingId: null, sending: false, notifyCount: 0, lastNotifyAt: 0, helpShown: false, visitAlertSent: false },
 };
 let idCounter = 0;
 
@@ -1289,6 +1299,32 @@ function plural(n, word) {
 
 function setText(id, value) {
   document.getElementById(id).textContent = value;
+}
+
+/**
+ * Calls onDue once, after `ms` of time with the tab visible (background time does not count).
+ * Returns { start, pause, due }; start() does nothing once it has fired.
+ */
+function visibleTimer(ms, onDue) {
+  let timer = null;
+  let elapsed = 0;
+  let startedAt = 0;
+  const api = {
+    due: false,
+    start() {
+      if (api.due || timer || document.hidden) return;
+      startedAt = Date.now();
+      timer = setTimeout(() => { timer = null; api.due = true; onDue(); }, Math.max(0, ms - elapsed));
+    },
+    pause() {
+      if (!timer) return;
+      clearTimeout(timer);
+      timer = null;
+      elapsed += Date.now() - startedAt;
+    },
+  };
+  document.addEventListener("visibilitychange", () => (document.hidden ? api.pause() : api.start()));
+  return api;
 }
 
 /* =========================================================
@@ -1593,24 +1629,21 @@ function showToast(message, type = "info") {
 /* =========================================================
    9. FORMSUBMIT — AJAX JSON notification (never breaks the board)
    ========================================================= */
+/** True when a FormSubmit AJAX URL is real (allowlisted prefix, placeholder replaced). */
+function isFormSubmitConfigured(endpoint, placeholder) {
+  return endpoint.startsWith(FORMSUBMIT_ORIGIN_PREFIX) && !endpoint.includes(placeholder);
+}
+
 function isEndpointConfigured() {
-  return FORMSUBMIT_ENDPOINT.startsWith(FORMSUBMIT_ORIGIN_PREFIX) && !FORMSUBMIT_ENDPOINT.includes(FORMSUBMIT_PLACEHOLDER);
+  return isFormSubmitConfigured(FORMSUBMIT_ENDPOINT, FORMSUBMIT_PLACEHOLDER);
 }
 
-/** Client-side rate limit so the form cannot be used to flood the inbox. */
-function notifyBlockedReason() {
-  if (state.ui.notifyCount >= NOTIFY_MAX_PER_SESSION) return "session notification limit reached";
-  if (Date.now() - state.ui.lastNotifyAt < NOTIFY_COOLDOWN_MS) return "notification cooldown active";
-  return "";
-}
-
-async function notifyNewTask(task) {
+/** Hardened FormSubmit POST: no credentials, no redirects, timeout, and success:"false" treated as failure. */
+async function postToFormSubmit(endpoint, payload) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), NOTIFY_TIMEOUT_MS);
-  state.ui.notifyCount += 1;
-  state.ui.lastNotifyAt = Date.now();
   try {
-    const res = await fetch(FORMSUBMIT_ENDPOINT, {
+    const res = await fetch(endpoint, {
       method: "POST",
       mode: "cors",
       credentials: "omit",
@@ -1619,21 +1652,7 @@ async function notifyNewTask(task) {
       referrerPolicy: "strict-origin",
       signal: controller.signal,
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({
-        _subject: `[UOB IT PMO] New task ${task.id}: ${cleanText(task.title)}`,
-        _template: "table",
-        _captcha: "false",
-        "Task ID": task.id,
-        Title: task.title,
-        Description: task.description,
-        Project: task.project,
-        Category: task.category,
-        Assignee: task.assignee,
-        Priority: task.priority,
-        "Due Date": task.dueDate,
-        Status: task.status,
-        "Submitted At": new Date().toISOString(),
-      }),
+      body: JSON.stringify({ _template: "table", _captcha: "false", ...payload }),
     });
     if (!res.ok) throw new Error(`FormSubmit failed: ${res.status}`);
     const json = await res.json();
@@ -1645,6 +1664,31 @@ async function notifyNewTask(task) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** Client-side rate limit so the form cannot be used to flood the inbox. */
+function notifyBlockedReason() {
+  if (state.ui.notifyCount >= NOTIFY_MAX_PER_SESSION) return "session notification limit reached";
+  if (Date.now() - state.ui.lastNotifyAt < NOTIFY_COOLDOWN_MS) return "notification cooldown active";
+  return "";
+}
+
+function notifyNewTask(task) {
+  state.ui.notifyCount += 1;
+  state.ui.lastNotifyAt = Date.now();
+  return postToFormSubmit(FORMSUBMIT_ENDPOINT, {
+    _subject: `[UOB IT PMO] New task ${task.id}: ${cleanText(task.title)}`,
+    "Task ID": task.id,
+    Title: task.title,
+    Description: task.description,
+    Project: task.project,
+    Category: task.category,
+    Assignee: task.assignee,
+    Priority: task.priority,
+    "Due Date": task.dueDate,
+    Status: task.status,
+    "Submitted At": new Date().toISOString(),
+  });
 }
 
 /* =========================================================
@@ -1792,7 +1836,7 @@ function closeDrawer() {
   clearFieldErrors();
   if (drawerReturnFocus && drawerReturnFocus.focus) drawerReturnFocus.focus();
   // The help prompt came due while the form was open: show it now.
-  if (!state.ui.helpShown && helpElapsed >= HELP_PROMPT_DELAY_MS) showHelpPrompt();
+  if (!state.ui.helpShown && helpTimer && helpTimer.due) showHelpPrompt();
 }
 
 function isDrawerOpen() {
@@ -1821,27 +1865,9 @@ function trapFocus(event) {
    12. HELP PROMPT — one-time support dialog after time on page
    ========================================================= */
 let helpTimer = null;
-let helpElapsed = 0;
-let helpStartedAt = 0;
 let helpReturnFocus = null;
 
-/** Count only time the tab is actually visible, so a background tab does not trigger it. */
-function startHelpTimer() {
-  if (state.ui.helpShown || helpTimer || document.hidden) return;
-  helpStartedAt = Date.now();
-  helpTimer = setTimeout(showHelpPrompt, Math.max(0, HELP_PROMPT_DELAY_MS - helpElapsed));
-}
-
-function pauseHelpTimer() {
-  if (!helpTimer) return;
-  clearTimeout(helpTimer);
-  helpTimer = null;
-  helpElapsed += Date.now() - helpStartedAt;
-}
-
 function showHelpPrompt() {
-  helpTimer = null;
-  helpElapsed = HELP_PROMPT_DELAY_MS;
   if (state.ui.helpShown) return;
   const dialog = document.getElementById("help-dialog");
   // Never interrupt someone mid-task: wait until the Add task form is closed.
@@ -1866,12 +1892,59 @@ function initHelpPrompt() {
     if (helpReturnFocus && helpReturnFocus.focus) helpReturnFocus.focus();
   });
 
-  document.addEventListener("visibilitychange", () => (document.hidden ? pauseHelpTimer() : startHelpTimer()));
-  startHelpTimer();
+  // Counts only visible-tab time, so a background tab does not trigger it.
+  helpTimer = visibleTimer(HELP_PROMPT_DELAY_MS, showHelpPrompt);
+  helpTimer.start();
 }
 
 /* =========================================================
-   13. WHATSAPP SUPPORT — floating button opens suggested questions
+   13. VISIT ALERT — email IT support when a visitor stays 10s+
+   ========================================================= */
+
+/** Automated browsers and visitors who opt out (Global Privacy Control) are never reported. */
+function visitAlertAllowed() {
+  return isFormSubmitConfigured(VISIT_ALERT_ENDPOINT, VISIT_ALERT_PLACEHOLDER) &&
+    !navigator.webdriver && !navigator.globalPrivacyControl;
+}
+
+/** Page link plus non-personal details. No IP, identifiers, cookies or form contents. */
+function visitDetails() {
+  let referrer = "Direct visit or not shared";
+  try { if (document.referrer) referrer = new URL(document.referrer).origin; } catch (e) { /* keep default */ }
+  const seconds = VISIT_ALERT_AFTER_MS / 1000;
+  return {
+    _subject: `[IT PMO portal] Visitor on the board for ${seconds}+ seconds`,
+    "Page link": location.origin + location.pathname,
+    "Page title": document.title,
+    "Time on page": `${seconds}+ seconds (tab visible)`,
+    "Visited at": new Date().toString(),
+    "Board status shown": `${document.getElementById("overview-headline").textContent}. ${document.getElementById("overview-sub").textContent}`,
+    "Came from": referrer,
+    "Browser language": navigator.language || "Unknown",
+    "Screen size": `${window.innerWidth} × ${window.innerHeight}`,
+    "Device type": matchMedia("(pointer: coarse)").matches ? "Touch (phone or tablet)" : "Mouse (desktop or laptop)",
+  };
+}
+
+async function sendVisitAlert() {
+  if (state.ui.visitAlertSent || !visitAlertAllowed()) return;
+  state.ui.visitAlertSent = true;
+  try {
+    await postToFormSubmit(VISIT_ALERT_ENDPOINT, visitDetails());
+  } catch (err) {
+    // Visitors never see alert failures; the board keeps working.
+    console.warn("[UOB IT PMO] Visit alert failed:", err && err.message ? err.message : err);
+  }
+}
+
+function initVisitAlert() {
+  if (!visitAlertAllowed()) return;
+  document.getElementById("visit-notice").hidden = false;
+  visibleTimer(VISIT_ALERT_AFTER_MS, sendVisitAlert).start();
+}
+
+/* =========================================================
+   14. WHATSAPP SUPPORT — floating button opens suggested questions
    ========================================================= */
 const ICON_CHEVRON = `<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M6 3.5L10.5 8 6 12.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
 
@@ -1886,7 +1959,7 @@ function openWhatsappDialog() {
   if (dialog.open || typeof dialog.showModal !== "function") return;
   // The visitor has found support, so the timed help prompt is no longer needed.
   state.ui.helpShown = true;
-  pauseHelpTimer();
+  if (helpTimer) helpTimer.pause();
   dialog.showModal();
   const first = dialog.querySelector(".wa-query");
   if (first) first.focus();
@@ -1916,7 +1989,7 @@ function initWhatsapp() {
 }
 
 /* =========================================================
-   14. EVENT BINDING — board clicks, drag & drop, filters, keys
+   15. EVENT BINDING — board clicks, drag & drop, filters, keys
    ========================================================= */
 function handleBoardClick(event) {
   const btn = event.target.closest("[data-action]");
@@ -2049,7 +2122,7 @@ function handleOutsideClick(event) {
 }
 
 /* =========================================================
-   15. INIT
+   16. INIT
    ========================================================= */
 
 /**
@@ -2120,6 +2193,7 @@ function init() {
   renderBoard();
   initHelpPrompt();
   initWhatsapp();
+  initVisitAlert();
 }
 
 document.addEventListener("DOMContentLoaded", init);

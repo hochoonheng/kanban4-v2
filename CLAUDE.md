@@ -22,10 +22,10 @@ Run it by opening `index.html` directly in a browser (`file://`). No server is n
 
 ## Script architecture
 
-The `<script>` is split into numbered, commented sections: CONFIG, STATE, HELPERS, SEED, FILTERING, RENDERING, ACTIONS, TOASTS, FORMSUBMIT, FORM, DRAWER, HELP PROMPT, WHATSAPP SUPPORT, EVENTS and INIT.
+The `<script>` is split into numbered, commented sections: CONFIG, STATE, HELPERS, SEED, FILTERING, RENDERING, ACTIONS, TOASTS, FORMSUBMIT, FORM, DRAWER, HELP PROMPT, VISIT ALERT, WHATSAPP SUPPORT, EVENTS and INIT.
 
 - **Single source of truth:** `state = { tasks, filters, ui }`.
-  - `ui` holds transient view state: `openMoveId`, `confirmDeleteId`, `draggingId`, `sending`, the notification rate-limit counters `notifyCount` and `lastNotifyAt`, and `helpShown`.
+  - `ui` holds transient view state: `openMoveId`, `confirmDeleteId`, `draggingId`, `sending`, the notification rate-limit counters `notifyCount` and `lastNotifyAt`, `helpShown` and `visitAlertSent`.
   - Every change mutates `state` and then calls `renderBoard()`.
 - **Rendering:**
   - `renderBoard()` is the only function that writes card DOM. It rebuilds each column's `innerHTML` from `applyFilters(state.tasks)` using `renderCard()`, then calls `renderOverview()`. That function renders the portfolio overview: the headline sentence, the KPI strip, the status-mix bar and the workstream health table (`workstreamHealth()` ranks Off track, At risk, On track, No open work).
@@ -55,6 +55,13 @@ The `<script>` is split into numbered, commented sections: CONFIG, STATE, HELPER
 - After `HELP_PROMPT_DELAY_MS` (10 s) of the tab being visible, a native `<dialog>` (`#help-dialog`) thanks the visitor and gives the IT support hotline `IT_SUPPORT_HOTLINE` (12345678) with a `tel:` call button. Both constants are in CONFIG.
 - It shows once per page load (no storage, so a refresh shows it again). Hidden-tab time does not count, and if it comes due while the Add task form is open it waits until `closeDrawer()`.
 - This is page code, not a Claude Code hook: `.claude/hooks` only runs on the developer machine and is never deployed.
+
+## Visit alerts
+
+- After `VISIT_ALERT_AFTER_MS` (10 s) of visible-tab time, `sendVisitAlert()` POSTs once per page load to `VISIT_ALERT_ENDPOINT` (FormSubmit), which emails the page link, title, time on page, visit time, board headline, referrer origin, language, screen size and device type. It sends no IP, identifiers, cookies or form contents.
+- It is off while the endpoint holds the `YOUR_ALERTS_EMAIL@example.com` placeholder, for automated browsers (`navigator.webdriver`) and under Global Privacy Control. When on, `#visit-notice` in the demo banner tells visitors.
+- Both FormSubmit calls go through `postToFormSubmit()`, and both timed features use `visibleTimer()` (it counts visible-tab time only).
+- The `it-support` agent (`.claude/agents/it-support.md`) checks the live site and alert setup on demand, and triages pasted alert emails. It does not monitor continuously; the page sends the alerts.
 
 ## WhatsApp support
 
