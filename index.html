@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UOB IT PMO Kanban</title>
+<meta name="description" content="Internal demo / training Kanban board for IT project management. In-memory only.">
+<style>
+/* =========================================================
+   1. DESIGN TOKENS — palette, spacing scale, radii, shadows
+   ========================================================= */
+:root {
+  /* Corporate blue palette */
+  --c-navy-900: #0a2350;
+  --c-navy-800: #0f2f6b;
+  --c-blue-700: #154a9e;
+  --c-blue-600: #1c5cc2;
+  --c-blue-100: #e3ecfa;
+  --c-blue-50:  #f2f6fd;
+
+  /* Surfaces & text */
+  --c-bg: #eef2f7;
+  --c-surface: #ffffff;
+  --c-surface-2: #f6f8fb;
+  --c-border: #d5dde8;
+  --c-text: #1a2433;
+  --c-text-muted: #56637a;
+  --c-text-inverse: #ffffff;
+
+  /* Priority colours (always paired with a text label) */
+  --c-prio-critical: #c62828;
+  --c-prio-high: #b45f06;
+  --c-prio-medium: #1c5cc2;
+  --c-prio-low: #7a8699;
+  --c-prio-critical-bg: #fde8e8;
+  --c-prio-high-bg: #fdf0dc;
+  --c-prio-medium-bg: #e3ecfa;
+  --c-prio-low-bg: #edf0f4;
+
+  /* Status / feedback */
+  --c-danger: #b3261e;
+  --c-danger-bg: #fdecea;
+  --c-success: #1b7a43;
+  --c-success-bg: #e6f4ec;
+  --c-warning: #8a5300;
+  --c-warning-bg: #fff4de;
+  --c-info: #154a9e;
+  --c-info-bg: #e3ecfa;
+
+  --c-focus: #ffb300;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+
+  --shadow-card: 0 1px 2px rgba(10, 35, 80, 0.08), 0 1px 3px rgba(10, 35, 80, 0.06);
+  --shadow-raised: 0 8px 24px rgba(10, 35, 80, 0.18);
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, "SFMono-Regular", Menlo, monospace;
+}
+
+/* =========================================================
+   2. BASE
+   ========================================================= */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--c-text);
+  background: var(--c-bg);
+}
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+button { cursor: pointer; }
+
+/* Visible focus ring on every interactive element */
+:focus-visible {
+  outline: 3px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Generic buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  line-height: 1.2;
+  background: var(--c-surface);
+}
+.btn-primary { background: var(--c-blue-600); color: var(--c-text-inverse); }
+.btn-primary:hover { background: var(--c-blue-700); }
+.btn-primary:disabled { background: var(--c-prio-low); cursor: progress; }
+.btn-light { background: var(--c-surface); color: var(--c-navy-800); }
+.btn-light:hover { background: var(--c-blue-100); }
+.btn-ghost { background: transparent; border-color: var(--c-border); color: var(--c-text); }
+.btn-ghost:hover { background: var(--c-surface-2); }
+
+/* =========================================================
+   3. HEADER — wordmark, summary strip, add button, demo note
+   ========================================================= */
+.app-header {
+  background: linear-gradient(135deg, var(--c-navy-900), var(--c-blue-700));
+  color: var(--c-text-inverse);
+  padding: var(--space-4) var(--space-5);
+}
+.header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.wordmark {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.wordmark span {
+  font-weight: 400;
+  opacity: 0.85;
+  margin-left: var(--space-2);
+  font-size: 0.95rem;
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.summary li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 0.85rem;
+}
+.summary strong { font-size: 1rem; font-variant-numeric: tabular-nums; }
+.summary .summary-overdue { background: rgba(198, 40, 40, 0.35); border-color: rgba(255, 180, 180, 0.5); }
+
+.demo-note {
+  margin: var(--space-3) 0 0;
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+/* =========================================================
+   4. FILTER BAR
+   ========================================================= */
+main { padding: var(--space-5); }
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  margin-bottom: var(--space-5);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+}
+.filters h2 { margin: 0; font-size: 0.95rem; align-self: center; }
+.filter-field { display: flex; flex-direction: column; gap: var(--space-1); min-width: 180px; }
+.filter-field label { font-size: 0.8rem; font-weight: 600; color: var(--c-text-muted); }
+.filter-field input, .filter-field select {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+}
+.filter-status { margin: 0 0 0 auto; font-size: 0.85rem; color: var(--c-text-muted); align-self: center; }
+
+/* =========================================================
+   5. BOARD & COLUMNS
+   ========================================================= */
+.board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+.column {
+  display: flex;
+  flex-direction: column;
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+  min-height: 240px;
+  transition: background-color 120ms ease, outline-color 120ms ease;
+  outline: 2px dashed transparent;
+  outline-offset: -2px;
+}
+.column.drag-over {
+  background: var(--c-blue-100);
+  outline-color: var(--c-blue-600);
+}
+.column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 3px solid var(--col-accent, var(--c-blue-600));
+}
+.column[data-status="Backlog"]     { --col-accent: var(--c-prio-low); }
+.column[data-status="In Progress"] { --col-accent: var(--c-blue-600); }
+.column[data-status="Blocked"]     { --col-accent: var(--c-prio-critical); }
+.column[data-status="Done"]        { --col-accent: var(--c-success); }
+.column-header h2 { margin: 0; font-size: 1rem; }
+.column-sub { display: block; font-size: 0.75rem; font-weight: 400; color: var(--c-text-muted); }
+.count-badge {
+  min-width: 28px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--c-navy-800);
+  color: var(--c-text-inverse);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  flex: 1;
+  min-height: 160px;
+}
+.card-list:focus-visible { outline-offset: -3px; }
+.empty {
+  margin: 0;
+  padding: var(--space-5) var(--space-3);
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--c-text-muted);
+  border: 1px dashed var(--c-border);
+  border-radius: var(--radius-md);
+}
+
+/* =========================================================
+   6. CARDS
+   ========================================================= */
+.card {
+  position: relative;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-left: 5px solid var(--prio-color, var(--c-prio-low));
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-3);
+  cursor: grab;
+}
+.card:hover { box-shadow: var(--shadow-raised); }
+.card.dragging { opacity: 0.45; cursor: grabbing; }
+.card.prio-critical { --prio-color: var(--c-prio-critical); --prio-bg: var(--c-prio-critical-bg); }
+.card.prio-high     { --prio-color: var(--c-prio-high);     --prio-bg: var(--c-prio-high-bg); }
+.card.prio-medium   { --prio-color: var(--c-prio-medium);   --prio-bg: var(--c-prio-medium-bg); }
+.card.prio-low      { --prio-color: var(--c-prio-low);      --prio-bg: var(--c-prio-low-bg); }
+
+.card-top { display: flex; align-items: center; gap: var(--space-2); }
+.card-id { font-family: var(--font-mono); font-size: 0.75rem; color: var(--c-text-muted); }
+.pill {
+  display: inline-block;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--prio-color);
+  background: var(--prio-bg);
+  border: 1px solid var(--prio-color);
+}
+.icon-btn {
+  margin-left: auto;
+  width: 28px; height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--c-text-muted);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+.icon-btn:hover { background: var(--c-danger-bg); color: var(--c-danger); }
+
+.card-title { margin: var(--space-2) 0 var(--space-1); font-size: 0.95rem; line-height: 1.3; overflow-wrap: anywhere; }
+.card-desc { margin: 0 0 var(--space-2); font-size: 0.8rem; color: var(--c-text-muted); overflow-wrap: anywhere; }
+
+.card-meta { margin: 0; display: grid; gap: 2px; font-size: 0.8rem; }
+.card-meta div { display: flex; gap: var(--space-2); }
+.card-meta dt { min-width: 58px; color: var(--c-text-muted); }
+.card-meta dd { margin: 0; overflow-wrap: anywhere; }
+
+.badge-overdue {
+  display: inline-block;
+  margin-left: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--c-danger-bg);
+  color: var(--c-danger);
+  border: 1px solid rgba(179, 38, 30, 0.35);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.tag {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--c-blue-50);
+  border: 1px solid var(--c-blue-100);
+  color: var(--c-navy-800);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.move-btn {
+  padding: 2px var(--space-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--c-blue-700);
+  white-space: nowrap;
+}
+.move-btn:hover, .move-btn[aria-expanded="true"] { background: var(--c-blue-100); }
+
+.move-menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  background: var(--c-blue-50);
+  border: 1px solid var(--c-blue-100);
+  border-radius: var(--radius-sm);
+}
+.move-menu p { width: 100%; margin: 0; font-size: 0.72rem; color: var(--c-text-muted); }
+.move-menu button {
+  padding: 2px var(--space-2);
+  border: 1px solid var(--c-blue-600);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  color: var(--c-blue-700);
+  font-size: 0.78rem;
+}
+.move-menu button:hover { background: var(--c-blue-600); color: var(--c-text-inverse); }
+
+.confirm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  background: var(--c-danger-bg);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--c-danger);
+}
+.confirm button {
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--c-danger);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.confirm .yes { background: var(--c-danger); color: var(--c-text-inverse); }
+.confirm .no { background: var(--c-surface); color: var(--c-danger); }
+
+/* =========================================================
+   7. ADD TASK DRAWER (dialog)
+   ========================================================= */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 35, 80, 0.25);
+  z-index: 20;
+}
+.drawer {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: min(440px, 100%);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-raised);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+}
+.backdrop[hidden], .drawer[hidden] { display: none; }
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  background: var(--c-navy-800);
+  color: var(--c-text-inverse);
+}
+.drawer-header h2 { margin: 0; font-size: 1.1rem; }
+.drawer-header .icon-btn { color: var(--c-text-inverse); }
+.drawer-header .icon-btn:hover { background: rgba(255, 255, 255, 0.15); color: var(--c-text-inverse); }
+
+.task-form {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.field { display: flex; flex-direction: column; gap: var(--space-1); }
+.field label { font-size: 0.85rem; font-weight: 600; }
+.field .req { color: var(--c-danger); }
+.field input, .field select, .field textarea {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+}
+.field textarea { resize: vertical; min-height: 84px; }
+.field [aria-invalid="true"] { border-color: var(--c-danger); background: var(--c-danger-bg); }
+.field-hint { margin: 0; font-size: 0.75rem; color: var(--c-text-muted); text-align: right; }
+.field-hint-left { text-align: left; }
+.field-error { margin: 0; min-height: 1em; font-size: 0.78rem; font-weight: 600; color: var(--c-danger); }
+.field-error:empty { min-height: 0; }
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--c-border);
+}
+
+/* =========================================================
+   8. TOASTS
+   ========================================================= */
+.toast-region {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: min(380px, calc(100% - 2 * var(--space-4)));
+}
+.toast {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border-left: 5px solid var(--toast-color);
+  background: var(--toast-bg);
+  color: var(--c-text);
+  box-shadow: var(--shadow-raised);
+  font-size: 0.88rem;
+  animation: toast-in 180ms ease-out;
+}
+.toast.leaving { animation: toast-out 220ms ease-in forwards; }
+.toast-success { --toast-color: var(--c-success); --toast-bg: var(--c-success-bg); }
+.toast-warning { --toast-color: var(--c-warning); --toast-bg: var(--c-warning-bg); }
+.toast-info    { --toast-color: var(--c-info);    --toast-bg: var(--c-info-bg); }
+.toast-icon { font-weight: 700; color: var(--toast-color); }
+
+@keyframes toast-in  { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes toast-out { to { opacity: 0; transform: translateY(8px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .toast, .toast.leaving { animation: none; }
+  .column { transition: none; }
+}
+
+/* =========================================================
+   9. RESPONSIVE — stack columns below 768px
+   ========================================================= */
+@media (max-width: 767.98px) {
+  .app-header { padding: var(--space-4); }
+  main { padding: var(--space-4); }
+  .board { grid-template-columns: 1fr; }
+  .column { min-height: 0; }
+  .card-list { min-height: 80px; }
+  .filter-field { min-width: 0; flex: 1 1 100%; }
+  .filter-status { margin-left: 0; }
+  .form-row { grid-template-columns: 1fr; }
+  .task-form { padding: var(--space-4); }
+}
+</style>
+</head>
+<body>
+
+<!-- =========================================================
+     HEADER — wordmark, live summary strip, Add Task trigger
+     ========================================================= -->
+<header class="app-header">
+  <div class="header-row">
+    <h1 class="wordmark">UOB IT PMO<span>Project Kanban · Demo</span></h1>
+    <button type="button" class="btn btn-light" id="open-add-task" aria-haspopup="dialog" aria-controls="add-task-drawer">
+      <span aria-hidden="true">+</span> Add Task
+    </button>
+  </div>
+
+  <ul class="summary" id="summary" aria-label="Board summary">
+    <li>Total <strong id="sum-total">0</strong></li>
+    <li>Backlog <strong id="sum-backlog">0</strong></li>
+    <li>In Progress <strong id="sum-inprogress">0</strong></li>
+    <li>Blocked <strong id="sum-blocked">0</strong></li>
+    <li>Done <strong id="sum-done">0</strong></li>
+    <li class="summary-overdue"><span aria-hidden="true">⚠</span> Overdue <strong id="sum-overdue">0</strong></li>
+  </ul>
+
+  <p class="demo-note">
+    <span aria-hidden="true">ⓘ</span>
+    Internal demo / training tool. Changes are held in memory only. Refreshing the page resets the board to the demo data.
+  </p>
+</header>
+
+<main>
+  <!-- =========================================================
+       FILTER BAR — pure client-side filtering over state.tasks
+       ========================================================= -->
+  <section class="filters" aria-labelledby="filters-heading">
+    <h2 id="filters-heading">Filters</h2>
+
+    <div class="filter-field">
+      <label for="filter-project">Project / Workstream</label>
+      <select id="filter-project">
+        <option value="">All projects</option>
+      </select>
+    </div>
+
+    <div class="filter-field">
+      <label for="filter-assignee">Assignee contains</label>
+      <input type="search" id="filter-assignee" placeholder="e.g. Priya" autocomplete="off">
+    </div>
+
+    <div class="filter-field">
+      <label for="filter-priority">Priority</label>
+      <select id="filter-priority">
+        <option value="">All priorities</option>
+      </select>
+    </div>
+
+    <button type="button" class="btn btn-ghost" id="clear-filters">Clear filters</button>
+    <p class="filter-status" id="filter-status" aria-live="polite"></p>
+  </section>
+
+  <!-- =========================================================
+       KANBAN BOARD — four fixed columns, cards rendered by renderBoard()
+       ========================================================= -->
+  <section class="board" id="board" aria-label="Kanban board">
+    <section class="column" data-status="Backlog" aria-labelledby="col-h-backlog">
+      <div class="column-header">
+        <h2 id="col-h-backlog">Backlog <span class="column-sub">Logged, not yet scheduled</span></h2>
+        <span class="count-badge" data-count="Backlog">0</span>
+      </div>
+      <div class="card-list" data-list="Backlog" tabindex="-1"></div>
+    </section>
+
+    <section class="column" data-status="In Progress" aria-labelledby="col-h-inprogress">
+      <div class="column-header">
+        <h2 id="col-h-inprogress">In Progress <span class="column-sub">Actively being worked</span></h2>
+        <span class="count-badge" data-count="In Progress">0</span>
+      </div>
+      <div class="card-list" data-list="In Progress" tabindex="-1"></div>
+    </section>
+
+    <section class="column" data-status="Blocked" aria-labelledby="col-h-blocked">
+      <div class="column-header">
+        <h2 id="col-h-blocked">Blocked <span class="column-sub">Waiting on dependency, vendor or approval</span></h2>
+        <span class="count-badge" data-count="Blocked">0</span>
+      </div>
+      <div class="card-list" data-list="Blocked" tabindex="-1"></div>
+    </section>
+
+    <section class="column" data-status="Done" aria-labelledby="col-h-done">
+      <div class="column-header">
+        <h2 id="col-h-done">Done <span class="column-sub">Completed / closed</span></h2>
+        <span class="count-badge" data-count="Done">0</span>
+      </div>
+      <div class="card-list" data-list="Done" tabindex="-1"></div>
+    </section>
+  </section>
+</main>
+
+<!-- =========================================================
+     ADD TASK DRAWER — dialog with validated form
+     ========================================================= -->
+<div class="backdrop" id="drawer-backdrop" hidden></div>
+<div class="drawer" id="add-task-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden>
+  <div class="drawer-header">
+    <h2 id="drawer-title">Add Task</h2>
+    <button type="button" class="icon-btn" id="close-add-task" aria-label="Close Add Task panel">×</button>
+  </div>
+
+  <form class="task-form" id="task-form" novalidate>
+    <div class="field">
+      <label for="f-title">Task Title <span class="req" aria-hidden="true">*</span></label>
+      <input type="text" id="f-title" name="title" maxlength="80" required aria-describedby="f-title-hint f-title-error">
+      <p class="field-hint" id="f-title-hint"><span data-counter="f-title">0</span>/80</p>
+      <p class="field-error" id="f-title-error"></p>
+    </div>
+
+    <div class="field">
+      <label for="f-description">Description</label>
+      <textarea id="f-description" name="description" maxlength="500" aria-describedby="f-description-hint f-description-error"></textarea>
+      <p class="field-hint" id="f-description-hint"><span data-counter="f-description">0</span>/500</p>
+      <p class="field-error" id="f-description-error"></p>
+    </div>
+
+    <div class="form-row">
+      <div class="field">
+        <label for="f-project">Project / Workstream <span class="req" aria-hidden="true">*</span></label>
+        <select id="f-project" name="project" required aria-describedby="f-project-error">
+          <option value="">Select…</option>
+        </select>
+        <p class="field-error" id="f-project-error"></p>
+      </div>
+
+      <div class="field">
+        <label for="f-category">Category <span class="req" aria-hidden="true">*</span></label>
+        <select id="f-category" name="category" required aria-describedby="f-category-error">
+          <option value="">Select…</option>
+        </select>
+        <p class="field-error" id="f-category-error"></p>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="f-assignee">Assignee <span class="req" aria-hidden="true">*</span></label>
+      <input type="text" id="f-assignee" name="assignee" maxlength="60" required autocomplete="off" aria-describedby="f-assignee-error">
+      <p class="field-error" id="f-assignee-error"></p>
+    </div>
+
+    <div class="form-row">
+      <div class="field">
+        <label for="f-priority">Priority</label>
+        <select id="f-priority" name="priority" aria-describedby="f-priority-error"></select>
+        <p class="field-error" id="f-priority-error"></p>
+      </div>
+
+      <div class="field">
+        <label for="f-status">Status</label>
+        <select id="f-status" name="status" aria-describedby="f-status-error"></select>
+        <p class="field-error" id="f-status-error"></p>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="f-dueDate">Due Date <span class="req" aria-hidden="true">*</span></label>
+      <input type="date" id="f-dueDate" name="dueDate" required aria-describedby="f-dueDate-error">
+      <p class="field-error" id="f-dueDate-error"></p>
+    </div>
+
+    <p class="field-hint field-hint-left"><span class="req" aria-hidden="true">*</span> Required field</p>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn-ghost" id="cancel-add-task">Close</button>
+      <button type="submit" class="btn btn-primary" id="submit-task">Add Task</button>
+    </div>
+  </form>
+</div>
+
+<!-- =========================================================
+     TOAST REGION — polite live region for status messages
+     ========================================================= -->
+<div class="toast-region" id="toast-region" role="status" aria-live="polite"></div>
+
+<!--
+  =========================================================
+  FORMSUBMIT CONFIGURATION — READ BEFORE USE
+  ---------------------------------------------------------
+  Set FORMSUBMIT_ENDPOINT (top of the script below) to
+  https://formsubmit.co/ajax/<your-address>.
+
+  FormSubmit needs a one-time activation. The FIRST submission
+  to a new address does not deliver. It sends a confirmation email
+  to that address instead. Submissions are only delivered after
+  someone clicks the activation link in that email.
+
+  Until the placeholder is replaced, the app skips the network call.
+  New cards are still added locally and a warning toast is shown.
+  =========================================================
+-->
+<script>
+"use strict";
+
+/* =========================================================
+   1. CONFIG — change the email address here, in one place only
+   ========================================================= */
+const FORMSUBMIT_ENDPOINT = "https://formsubmit.co/ajax/YOUR_EMAIL@example.com";
+const FORMSUBMIT_PLACEHOLDER = "YOUR_EMAIL@example.com";
+
+const STATUSES = ["Backlog", "In Progress", "Blocked", "Done"];
+const PROJECTS = [
+  "Core Banking Upgrade",
+  "Digital Channels",
+  "Cybersecurity Uplift",
+  "Data & Analytics",
+  "Infrastructure & Cloud",
+  "Vendor Management",
+];
+const CATEGORIES = [
+  "Application Development",
+  "Infrastructure",
+  "Cybersecurity",
+  "Data",
+  "Compliance",
+  "Vendor",
+];
+const PRIORITIES = ["Critical", "High", "Medium", "Low"];
+const TITLE_MAX = 80;
+const DESCRIPTION_MAX = 500;
+
+/* =========================================================
+   2. STATE — the single source of truth (in memory only)
+   ========================================================= */
+const state = {
+  tasks: [],
+  filters: { project: "", assignee: "", priority: "" },
+  ui: { openMoveId: null, confirmDeleteId: null, draggingId: null, sending: false },
+};
+let idCounter = 0;
+
+/* =========================================================
+   3. HELPERS
+   ========================================================= */
+
+/** Escape a value for safe insertion into HTML text or attribute context. */
+function escapeHtml(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/** Local-date ISO string (YYYY-MM-DD), avoiding UTC off-by-one issues. */
+function toISODate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function todayISO() {
+  return toISODate(new Date());
+}
+
+function addDays(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return toISODate(d);
+}
+
+/** Human-friendly due date, e.g. "23 Sep 2026". */
+function formatDate(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function nextTaskId() {
+  idCounter += 1;
+  return `UOB-ITPM-${String(idCounter).padStart(4, "0")}`;
+}
+
+function isOverdue(task) {
+  return task.status !== "Done" && task.dueDate < todayISO();
+}
+
+function findTask(id) {
+  return state.tasks.find((t) => t.id === id);
+}
+
+function cssAttr(value) {
+  return window.CSS && CSS.escape ? CSS.escape(value) : String(value).replace(/"/g, '\\"');
+}
+
+/* =========================================================
+   4. SEED DATA — 8 demo tasks with dates relative to today
+   ========================================================= */
+function seedTasks() {
+  const seed = [
+    { title: "Migrate FX pricing service to AWS", description: "Lift-and-shift of the FX rate engine to the regional AWS landing zone, with a rollback plan.", project: "Infrastructure & Cloud", category: "Infrastructure", assignee: "Tan Wei Ming", priority: "High", dueDate: addDays(12), status: "In Progress" },
+    { title: "Patch CVE-2025-XXXX on branch teller VDI", description: "Apply the vendor hotfix across the teller VDI pool. Waiting on a CAB emergency change approval.", project: "Cybersecurity Uplift", category: "Cybersecurity", assignee: "Priya Nair", priority: "Critical", dueDate: addDays(-2), status: "Blocked" },
+    { title: "UAT sign-off for mobile onboarding release 4.2", description: "Collect business sign-off on eKYC flow regression and accessibility test results.", project: "Digital Channels", category: "Application Development", assignee: "Nurul Huda", priority: "High", dueDate: addDays(5), status: "In Progress" },
+    { title: "Compile SWIFT CSP attestation evidence", description: "Gather control evidence packs for the annual customer security programme attestation.", project: "Cybersecurity Uplift", category: "Compliance", assignee: "Daniel Lim", priority: "Medium", dueDate: addDays(30), status: "Backlog" },
+    { title: "Upgrade core banking DB cluster to 19c", description: "Plan the rehearsal and production cut-over windows with the DBA and app teams.", project: "Core Banking Upgrade", category: "Infrastructure", assignee: "Arjun Menon", priority: "Critical", dueDate: addDays(45), status: "Backlog" },
+    { title: "Tag PII fields in enterprise data lake", description: "Classify customer PII columns and apply masking policies in the curated zone.", project: "Data & Analytics", category: "Data", assignee: "Chen Jia Hui", priority: "Medium", dueDate: addDays(-1), status: "In Progress" },
+    { title: "Renew mainframe support contract", description: "Commercial terms under legal review. Vendor response pending on the SLA credits clause.", project: "Vendor Management", category: "Vendor", assignee: "Siti Rahman", priority: "High", dueDate: addDays(8), status: "Blocked" },
+    { title: "Onboard ATM network logs to SIEM", description: "Parsers deployed and use-cases tuned. Handed over to SOC.", project: "Cybersecurity Uplift", category: "Cybersecurity", assignee: "Marcus Goh", priority: "Low", dueDate: addDays(-6), status: "Done" },
+  ];
+  seed.forEach((t) => state.tasks.push({ id: nextTaskId(), ...t }));
+}
+
+/* =========================================================
+   5. FILTERING
+   ========================================================= */
+function applyFilters(tasks) {
+  const { project, assignee, priority } = state.filters;
+  const needle = assignee.trim().toLowerCase();
+  return tasks.filter((t) =>
+    (!project || t.project === project) &&
+    (!priority || t.priority === priority) &&
+    (!needle || t.assignee.toLowerCase().includes(needle))
+  );
+}
+
+function hasActiveFilters() {
+  const { project, assignee, priority } = state.filters;
+  return Boolean(project || assignee.trim() || priority);
+}
+
+/* =========================================================
+   6. RENDERING — board, cards, summary
+   ========================================================= */
+function renderCard(task) {
+  const id = escapeHtml(task.id);
+  const prio = task.priority.toLowerCase();
+  const overdue = isOverdue(task);
+  const moveOpen = state.ui.openMoveId === task.id;
+  const confirming = state.ui.confirmDeleteId === task.id;
+
+  const moveMenu = moveOpen
+    ? `<div class="move-menu" role="group" aria-label="Move ${id} to column" id="move-menu-${id}">
+         <p>Move to:</p>
+         ${STATUSES.filter((s) => s !== task.status)
+           .map((s) => `<button type="button" data-action="move-to" data-id="${id}" data-status="${escapeHtml(s)}">${escapeHtml(s)}</button>`)
+           .join("")}
+       </div>`
+    : "";
+
+  const confirm = confirming
+    ? `<div class="confirm" role="group" aria-label="Confirm delete of ${id}">
+         <span>Delete?</span>
+         <button type="button" class="yes" data-action="delete-yes" data-id="${id}">Yes</button>
+         <button type="button" class="no" data-action="delete-no" data-id="${id}">No</button>
+       </div>`
+    : "";
+
+  return `
+    <article class="card prio-${escapeHtml(prio)}" draggable="true" data-id="${id}" aria-label="${id}: ${escapeHtml(task.title)}">
+      <div class="card-top">
+        <span class="card-id">${id}</span>
+        <span class="pill">${escapeHtml(task.priority)}</span>
+        <button type="button" class="icon-btn" data-action="delete" data-id="${id}" aria-label="Delete task ${id}">×</button>
+      </div>
+      <h3 class="card-title">${escapeHtml(task.title)}</h3>
+      ${task.description ? `<p class="card-desc">${escapeHtml(task.description)}</p>` : ""}
+      <dl class="card-meta">
+        <div><dt>Project</dt><dd>${escapeHtml(task.project)}</dd></div>
+        <div><dt>Assignee</dt><dd>${escapeHtml(task.assignee)}</dd></div>
+        <div><dt>Due</dt><dd><time datetime="${escapeHtml(task.dueDate)}">${escapeHtml(formatDate(task.dueDate))}</time>${
+          overdue ? ` <span class="badge-overdue"><span aria-hidden="true">⚠</span> Overdue</span>` : ""
+        }</dd></div>
+      </dl>
+      <div class="card-foot">
+        <span class="tag">${escapeHtml(task.category)}</span>
+        <button type="button" class="move-btn" data-action="move-toggle" data-id="${id}"
+          aria-expanded="${moveOpen}" aria-controls="move-menu-${id}" aria-label="Move task ${id} to another column">Move ▸</button>
+      </div>
+      ${moveMenu}
+      ${confirm}
+    </article>`;
+}
+
+function renderSummary() {
+  const count = (status) => state.tasks.filter((t) => t.status === status).length;
+  document.getElementById("sum-total").textContent = state.tasks.length;
+  document.getElementById("sum-backlog").textContent = count("Backlog");
+  document.getElementById("sum-inprogress").textContent = count("In Progress");
+  document.getElementById("sum-blocked").textContent = count("Blocked");
+  document.getElementById("sum-done").textContent = count("Done");
+  document.getElementById("sum-overdue").textContent = state.tasks.filter(isOverdue).length;
+}
+
+/**
+ * Re-render every column from state. This is the only function that writes card DOM.
+ * @param {string} [focusSelector] element to focus after render (keeps keyboard users in place)
+ */
+function renderBoard(focusSelector) {
+  const visible = applyFilters(state.tasks);
+  const emptyText = hasActiveFilters() ? "No tasks match the current filters" : "No tasks";
+
+  STATUSES.forEach((status) => {
+    const list = document.querySelector(`[data-list="${status}"]`);
+    const tasks = visible.filter((t) => t.status === status);
+    list.innerHTML = tasks.length
+      ? tasks.map(renderCard).join("")
+      : `<p class="empty">${escapeHtml(emptyText)}</p>`;
+
+    const badge = document.querySelector(`[data-count="${status}"]`);
+    badge.textContent = tasks.length;
+    badge.setAttribute("aria-label", `${tasks.length} task${tasks.length === 1 ? "" : "s"}`);
+  });
+
+  document.getElementById("filter-status").textContent = hasActiveFilters()
+    ? `Showing ${visible.length} of ${state.tasks.length} tasks`
+    : `${state.tasks.length} tasks`;
+
+  renderSummary();
+
+  if (focusSelector) {
+    const el = document.querySelector(focusSelector);
+    if (el) el.focus();
+  }
+}
+
+/* =========================================================
+   7. TASK ACTIONS — add, move, delete
+   ========================================================= */
+function addTask(data) {
+  const task = {
+    id: nextTaskId(),
+    title: data.title.trim(),
+    description: data.description.trim(),
+    project: data.project,
+    category: data.category,
+    assignee: data.assignee.trim(),
+    priority: data.priority,
+    dueDate: data.dueDate,
+    status: data.status,
+  };
+  state.tasks.push(task);
+  renderBoard();
+  return task;
+}
+
+function moveTask(id, status) {
+  const task = findTask(id);
+  if (!task || !STATUSES.includes(status)) return;
+  const changed = task.status !== status;
+  task.status = status;
+  state.ui.openMoveId = null;
+  state.ui.confirmDeleteId = null;
+  const listSel = `[data-list="${cssAttr(status)}"]`;
+  const moveSel = `[data-action="move-toggle"][data-id="${cssAttr(id)}"]`;
+  renderBoard(document.querySelector(moveSel) ? moveSel : listSel);
+  // The card may be hidden by filters, so fall back to focusing its new column.
+  if (!document.querySelector(moveSel)) {
+    const list = document.querySelector(listSel);
+    if (list) list.focus();
+  }
+  if (changed) showToast(`${task.id} moved to ${status}.`, "info");
+}
+
+function deleteTask(id) {
+  const idx = state.tasks.findIndex((t) => t.id === id);
+  if (idx === -1) return;
+  const [removed] = state.tasks.splice(idx, 1);
+  state.ui.confirmDeleteId = null;
+  state.ui.openMoveId = null;
+  renderBoard(`[data-list="${cssAttr(removed.status)}"]`);
+  showToast(`${removed.id} deleted.`, "info");
+}
+
+/* =========================================================
+   8. TOASTS
+   ========================================================= */
+function showToast(message, type = "info") {
+  const region = document.getElementById("toast-region");
+  const icons = { success: "✓", warning: "⚠", info: "ⓘ" };
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `<span class="toast-icon" aria-hidden="true">${icons[type] || icons.info}</span><span>${escapeHtml(message)}</span>`;
+  region.appendChild(toast);
+
+  const ttl = type === "warning" ? 6500 : 4000;
+  setTimeout(() => {
+    toast.classList.add("leaving");
+    setTimeout(() => toast.remove(), 250);
+  }, ttl);
+}
+
+/* =========================================================
+   9. FORMSUBMIT — AJAX JSON notification (never breaks the board)
+   ========================================================= */
+function isEndpointConfigured() {
+  return !FORMSUBMIT_ENDPOINT.includes(FORMSUBMIT_PLACEHOLDER);
+}
+
+async function notifyNewTask(task) {
+  const res = await fetch(FORMSUBMIT_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      _subject: `[UOB IT PMO] New task ${task.id}: ${task.title}`,
+      _template: "table",
+      _captcha: "false",
+      "Task ID": task.id,
+      Title: task.title,
+      Description: task.description,
+      Project: task.project,
+      Category: task.category,
+      Assignee: task.assignee,
+      Priority: task.priority,
+      "Due Date": task.dueDate,
+      Status: task.status,
+      "Submitted At": new Date().toISOString(),
+    }),
+  });
+  if (!res.ok) throw new Error(`FormSubmit failed: ${res.status}`);
+  const json = await res.json();
+  // FormSubmit can return HTTP 200 with success:"false" (e.g. activation pending).
+  if (json && (json.success === false || json.success === "false")) {
+    throw new Error(`FormSubmit rejected: ${json.message || "unknown reason"}`);
+  }
+  return json;
+}
+
+/* =========================================================
+   10. FORM — read, validate, errors, submit
+   ========================================================= */
+const FIELD_IDS = {
+  title: "f-title",
+  description: "f-description",
+  project: "f-project",
+  category: "f-category",
+  assignee: "f-assignee",
+  priority: "f-priority",
+  dueDate: "f-dueDate",
+  status: "f-status",
+};
+
+function readForm() {
+  const data = {};
+  Object.entries(FIELD_IDS).forEach(([key, id]) => {
+    data[key] = document.getElementById(id).value;
+  });
+  return data;
+}
+
+function validateForm(data) {
+  const errors = {};
+  const title = data.title.trim();
+  if (!title) errors.title = "Task title is required.";
+  else if (title.length > TITLE_MAX) errors.title = `Title must be ${TITLE_MAX} characters or fewer.`;
+
+  if (data.description.trim().length > DESCRIPTION_MAX) {
+    errors.description = `Description must be ${DESCRIPTION_MAX} characters or fewer.`;
+  }
+  if (!PROJECTS.includes(data.project)) errors.project = "Select a project / workstream.";
+  if (!CATEGORIES.includes(data.category)) errors.category = "Select a category.";
+  if (!data.assignee.trim()) errors.assignee = "Assignee is required.";
+  if (!PRIORITIES.includes(data.priority)) errors.priority = "Select a priority.";
+  if (!STATUSES.includes(data.status)) errors.status = "Select a status.";
+
+  if (!data.dueDate) errors.dueDate = "Due date is required.";
+  else if (!/^\d{4}-\d{2}-\d{2}$/.test(data.dueDate)) errors.dueDate = "Enter a valid date.";
+  else if (data.dueDate < todayISO()) errors.dueDate = "Due date cannot be in the past.";
+
+  return errors;
+}
+
+function clearFieldErrors() {
+  Object.values(FIELD_IDS).forEach((id) => {
+    document.getElementById(id).removeAttribute("aria-invalid");
+    document.getElementById(`${id}-error`).textContent = "";
+  });
+}
+
+function showFieldErrors(errors) {
+  let first = null;
+  Object.entries(errors).forEach(([key, msg]) => {
+    const id = FIELD_IDS[key];
+    const input = document.getElementById(id);
+    input.setAttribute("aria-invalid", "true");
+    document.getElementById(`${id}-error`).textContent = msg;
+    if (!first) first = input;
+  });
+  if (first) first.focus();
+}
+
+function updateCounters() {
+  document.querySelectorAll("[data-counter]").forEach((el) => {
+    el.textContent = document.getElementById(el.dataset.counter).value.length;
+  });
+}
+
+function resetForm() {
+  const form = document.getElementById("task-form");
+  form.reset();
+  document.getElementById("f-priority").value = "Medium";
+  document.getElementById("f-status").value = "Backlog";
+  document.getElementById("f-dueDate").min = todayISO();
+  clearFieldErrors();
+  updateCounters();
+}
+
+function setSending(sending) {
+  state.ui.sending = sending;
+  const btn = document.getElementById("submit-task");
+  btn.disabled = sending;
+  btn.setAttribute("aria-busy", String(sending));
+  btn.textContent = sending ? "Sending…" : "Add Task";
+}
+
+async function handleSubmit(event) {
+  event.preventDefault();
+  if (state.ui.sending) return;
+
+  const data = readForm();
+  const errors = validateForm(data);
+  clearFieldErrors();
+  if (Object.keys(errors).length) {
+    showFieldErrors(errors);
+    return;
+  }
+
+  // Optimistic UI: the card goes on the board right away.
+  const task = addTask(data);
+  resetForm();
+  document.getElementById("f-title").focus();
+  showToast(`Task ${task.id} added to ${task.status}.`, "success");
+
+  // Email notification runs in parallel. A failure here never affects the board.
+  setSending(true);
+  try {
+    if (!isEndpointConfigured()) throw new Error("FORMSUBMIT_ENDPOINT still uses the placeholder address");
+    await notifyNewTask(task);
+    showToast(`Email notification sent for ${task.id}.`, "info");
+  } catch (err) {
+    console.warn("[UOB IT PMO] Notification failed:", err);
+    showToast("Card added locally — email notification failed", "warning");
+  } finally {
+    setSending(false);
+  }
+}
+
+/* =========================================================
+   11. DRAWER (dialog) — open, close, focus trap
+   ========================================================= */
+let drawerReturnFocus = null;
+
+function openDrawer() {
+  drawerReturnFocus = document.activeElement;
+  document.getElementById("drawer-backdrop").hidden = false;
+  document.getElementById("add-task-drawer").hidden = false;
+  document.getElementById("f-dueDate").min = todayISO();
+  document.getElementById("f-title").focus();
+}
+
+function closeDrawer() {
+  document.getElementById("drawer-backdrop").hidden = true;
+  document.getElementById("add-task-drawer").hidden = true;
+  clearFieldErrors();
+  if (drawerReturnFocus && drawerReturnFocus.focus) drawerReturnFocus.focus();
+}
+
+function isDrawerOpen() {
+  return !document.getElementById("add-task-drawer").hidden;
+}
+
+function trapFocus(event) {
+  if (event.key !== "Tab" || !isDrawerOpen()) return;
+  const drawer = document.getElementById("add-task-drawer");
+  const focusable = Array.from(
+    drawer.querySelectorAll("button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex='-1'])")
+  );
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+/* =========================================================
+   12. EVENT BINDING — board clicks, drag & drop, filters, keys
+   ========================================================= */
+function handleBoardClick(event) {
+  const btn = event.target.closest("[data-action]");
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const sel = (action) => `[data-action="${action}"][data-id="${cssAttr(id)}"]`;
+
+  switch (btn.dataset.action) {
+    case "move-toggle":
+      state.ui.confirmDeleteId = null;
+      state.ui.openMoveId = state.ui.openMoveId === id ? null : id;
+      renderBoard(state.ui.openMoveId ? sel("move-to") : sel("move-toggle"));
+      break;
+    case "move-to":
+      moveTask(id, btn.dataset.status);
+      break;
+    case "delete":
+      state.ui.openMoveId = null;
+      state.ui.confirmDeleteId = id;
+      renderBoard(sel("delete-no"));
+      break;
+    case "delete-no":
+      state.ui.confirmDeleteId = null;
+      renderBoard(sel("delete"));
+      break;
+    case "delete-yes":
+      deleteTask(id);
+      break;
+  }
+}
+
+function bindDragAndDrop() {
+  const board = document.getElementById("board");
+
+  board.addEventListener("dragstart", (e) => {
+    const card = e.target.closest && e.target.closest(".card");
+    if (!card) return;
+    state.ui.draggingId = card.dataset.id;
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", card.dataset.id);
+    card.classList.add("dragging");
+  });
+
+  board.addEventListener("dragend", (e) => {
+    const card = e.target.closest && e.target.closest(".card");
+    if (card) card.classList.remove("dragging");
+    state.ui.draggingId = null;
+    document.querySelectorAll(".column.drag-over").forEach((c) => c.classList.remove("drag-over"));
+  });
+
+  document.querySelectorAll(".column").forEach((column) => {
+    column.addEventListener("dragover", (e) => {
+      if (!state.ui.draggingId) return;
+      e.preventDefault(); // required to allow a drop
+      e.dataTransfer.dropEffect = "move";
+      column.classList.add("drag-over");
+    });
+    column.addEventListener("dragleave", (e) => {
+      if (!column.contains(e.relatedTarget)) column.classList.remove("drag-over");
+    });
+    column.addEventListener("drop", (e) => {
+      e.preventDefault();
+      column.classList.remove("drag-over");
+      const id = e.dataTransfer.getData("text/plain") || state.ui.draggingId;
+      state.ui.draggingId = null;
+      if (id) moveTask(id, column.dataset.status);
+    });
+  });
+}
+
+function bindFilters() {
+  const project = document.getElementById("filter-project");
+  const assignee = document.getElementById("filter-assignee");
+  const priority = document.getElementById("filter-priority");
+
+  project.addEventListener("change", () => { state.filters.project = project.value; renderBoard(); });
+  priority.addEventListener("change", () => { state.filters.priority = priority.value; renderBoard(); });
+  assignee.addEventListener("input", () => { state.filters.assignee = assignee.value; renderBoard(); });
+
+  document.getElementById("clear-filters").addEventListener("click", () => {
+    state.filters = { project: "", assignee: "", priority: "" };
+    project.value = "";
+    assignee.value = "";
+    priority.value = "";
+    renderBoard();
+  });
+}
+
+function handleGlobalKeydown(event) {
+  trapFocus(event);
+  if (event.key !== "Escape") return;
+
+  if (isDrawerOpen()) {
+    closeDrawer();
+    return;
+  }
+  const id = state.ui.openMoveId || state.ui.confirmDeleteId;
+  if (id) {
+    const action = state.ui.openMoveId ? "move-toggle" : "delete";
+    state.ui.openMoveId = null;
+    state.ui.confirmDeleteId = null;
+    renderBoard(`[data-action="${action}"][data-id="${cssAttr(id)}"]`);
+  }
+}
+
+/** Close an open Move menu / delete confirm when clicking elsewhere. */
+function handleOutsideClick(event) {
+  const id = state.ui.openMoveId || state.ui.confirmDeleteId;
+  if (!id) return;
+  const card = event.target.closest && event.target.closest(".card");
+  if (card && card.dataset.id === id) return;
+  state.ui.openMoveId = null;
+  state.ui.confirmDeleteId = null;
+  renderBoard();
+}
+
+/* =========================================================
+   13. INIT
+   ========================================================= */
+function fillSelect(select, options) {
+  select.insertAdjacentHTML(
+    "beforeend",
+    options.map((o) => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join("")
+  );
+}
+
+function init() {
+  fillSelect(document.getElementById("filter-project"), PROJECTS);
+  fillSelect(document.getElementById("filter-priority"), PRIORITIES);
+  fillSelect(document.getElementById("f-project"), PROJECTS);
+  fillSelect(document.getElementById("f-category"), CATEGORIES);
+  fillSelect(document.getElementById("f-priority"), PRIORITIES);
+  fillSelect(document.getElementById("f-status"), STATUSES);
+  resetForm();
+
+  document.getElementById("board").addEventListener("click", handleBoardClick);
+  document.addEventListener("click", handleOutsideClick, true);
+  document.addEventListener("keydown", handleGlobalKeydown);
+  bindDragAndDrop();
+  bindFilters();
+
+  document.getElementById("open-add-task").addEventListener("click", openDrawer);
+  document.getElementById("close-add-task").addEventListener("click", closeDrawer);
+  document.getElementById("cancel-add-task").addEventListener("click", closeDrawer);
+  document.getElementById("drawer-backdrop").addEventListener("click", closeDrawer);
+  document.getElementById("task-form").addEventListener("submit", handleSubmit);
+  document.getElementById("task-form").addEventListener("input", updateCounters);
+
+  seedTasks();
+  renderBoard();
+}
+
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
