@@ -20,6 +20,7 @@ A single-file project portfolio board for tracking IT project tasks, built for i
 - Filter by workstream, assignee and priority; column badges show the filtered counts
 - Priority pills and an **Overdue** badge that use text as well as colour
 - A one-time help dialog after 10 seconds on the page, with the IT support hotline (12345678) and a tap-to-call button
+- Floating WhatsApp button (bottom right) that opens a list of suggested IT support questions; choosing one starts a WhatsApp chat with +65 1234 5678 with the question pre-filled
 - Optional email notification for each new task via [FormSubmit](https://formsubmit.co/)
 - Responsive layout (two columns below 1100px, one below 768px) and a print stylesheet for status packs
 - Accessible: labelled inputs, visible focus rings, `aria-live` announcements, Esc closes menus and the form

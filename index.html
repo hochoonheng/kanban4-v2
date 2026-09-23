@@ -9,7 +9,7 @@
     and fetch() calls to FormSubmit. Hashes are regenerated whenever the style or script changes
     (see CLAUDE.md → "Content Security Policy").
 -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'sha256-lPoay94KzRVGwCBzG6+aivKSqcTetz/pHqlHv6J8mYQ='; script-src 'sha256-WbDqujaIyCRin0+LmmBuYp5ACPxyF0/bfv7f3aVzMII='; img-src data:; connect-src https://formsubmit.co; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'sha256-8D0uaz33yxaIqkyAn1RGlmckWls2arXNoSvKW7kRny4='; script-src 'sha256-dB2AGbRY48iRzMXoXycNOImwrTBHehQCIik5pwGF5W0='; img-src data:; connect-src https://formsubmit.co; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light">
@@ -67,6 +67,11 @@
   --c-info-bg: #fff7ed;
 
   /* Focus ring: blue so it stays visible on white and on orange buttons */
+  /* WhatsApp teal (darker than the brand green so the white icon keeps 4:1 contrast) */
+  --c-whatsapp: #128c7e;
+  --c-whatsapp-dark: #075e54;
+  --c-whatsapp-bg: #e7f6f3;
+
   --c-focus: #1d4ed8;
   --c-backdrop: rgba(31, 35, 40, 0.35);
 
@@ -89,6 +94,7 @@
 
   --page-max: 1440px;
   --accent-bar: 4px;
+  --fab-size: 56px;
 
   --radius-sm: 4px;
   --radius-md: 6px;
@@ -226,7 +232,8 @@ h1, h2, h3 { font-family: var(--font-display); }
 /* =========================================================
    4. PORTFOLIO OVERVIEW — headline, KPIs, status mix, workstreams
    ========================================================= */
-main { padding: var(--space-6) 0 var(--space-7); }
+/* Bottom padding keeps the last cards clear of the floating WhatsApp button */
+main { padding: var(--space-6) 0 calc(var(--fab-size) + var(--space-6)); }
 
 .section-title {
   margin: 0 0 var(--space-3);
@@ -696,7 +703,7 @@ main { padding: var(--space-6) 0 var(--space-7); }
 .toast-region {
   position: fixed;
   right: var(--space-4);
-  bottom: var(--space-4);
+  bottom: calc(var(--space-4) + var(--fab-size) + var(--space-3));
   z-index: 40;
   display: flex;
   flex-direction: column;
@@ -728,7 +735,7 @@ main { padding: var(--space-6) 0 var(--space-7); }
 
 @media (prefers-reduced-motion: reduce) {
   .toast, .toast.leaving { animation: none; }
-  .column, .card, .btn { transition: none; }
+  .column, .card, .btn, .wa-fab { transition: none; }
 }
 
 /* Help prompt dialog (native <dialog>, opened with showModal) */
@@ -749,6 +756,59 @@ main { padding: var(--space-6) 0 var(--space-7); }
 .help-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-3); }
 .help-actions .btn-primary { text-decoration: none; }
 
+/* WhatsApp support — floating button and suggested-question dialog */
+.wa-fab {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 15;
+  display: grid;
+  place-items: center;
+  width: var(--fab-size);
+  height: var(--fab-size);
+  border: 0;
+  border-radius: 50%;
+  background: var(--c-whatsapp);
+  color: var(--c-text-inverse);
+  box-shadow: var(--shadow-raised);
+  transition: background-color 120ms ease;
+}
+.wa-fab:hover { background: var(--c-whatsapp-dark); }
+.wa-fab svg { width: 30px; height: 30px; }
+
+.wa-dialog {
+  width: min(460px, calc(100% - 2 * var(--space-4)));
+  padding: var(--space-5);
+  border: 1px solid var(--c-border);
+  border-top: var(--accent-bar) solid var(--c-whatsapp);
+  border-radius: var(--radius-lg);
+  background: var(--c-surface);
+  color: var(--c-text);
+  box-shadow: var(--shadow-raised);
+}
+.wa-dialog::backdrop { background: var(--c-backdrop, rgba(31, 35, 40, 0.35)); }
+.wa-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.wa-head h2 { margin: 0; font-size: var(--fs-lg); font-weight: 650; }
+.wa-dialog > p { margin: var(--space-2) 0 var(--space-4); color: var(--c-text-muted); }
+.wa-dialog > p strong { color: var(--c-text); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.wa-list { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.wa-query {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--c-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+.wa-query:hover { border-color: var(--c-whatsapp); background: var(--c-whatsapp-bg); }
+.wa-query svg { flex: none; width: 16px; height: 16px; color: var(--c-whatsapp); }
+.wa-dialog .wa-note { margin: var(--space-4) 0 0; font-size: var(--fs-sm); color: var(--c-warning); }
+
 /* Shown instead of the app when the page is loaded inside a frame (clickjacking guard) */
 .frame-warning { max-width: 60ch; margin: var(--space-7) auto; padding: 0 var(--space-4); }
 
@@ -756,7 +816,7 @@ main { padding: var(--space-6) 0 var(--space-7); }
    10. RESPONSIVE — overview reflows at 1100px, columns stack below 768px
    ========================================================= */
 @media (max-width: 1099.98px) {
-  .overview-grid { grid-template-columns: 1fr; }
+  .overview-grid { grid-template-columns: minmax(0, 1fr); }
   .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .kpi:nth-child(4) { border-left: 0; }
   .kpi:nth-child(n+4) { border-top: 1px solid var(--c-border); }
@@ -787,7 +847,7 @@ main { padding: var(--space-6) 0 var(--space-7); }
    ========================================================= */
 @media print {
   body { background: var(--c-surface); }
-  .header-actions .btn, .filters, .move-btn, .icon-btn, .toast-region, .demo-bar { display: none; }
+  .header-actions .btn, .filters, .move-btn, .icon-btn, .toast-region, .demo-bar, .wa-fab { display: none; }
   .column, .card, .panel, .kpis { break-inside: avoid; box-shadow: none; }
   .board { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
@@ -1042,6 +1102,25 @@ main { padding: var(--space-6) 0 var(--space-7); }
   </div>
 </dialog>
 
+<!-- =========================================================
+     WHATSAPP SUPPORT — floating button + suggested-question dialog
+     ========================================================= -->
+<button type="button" class="wa-fab" id="wa-open" aria-haspopup="dialog" aria-controls="wa-dialog" aria-label="Chat with IT support on WhatsApp">
+  <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path fill="currentColor" d="M16 3a13 13 0 0 0-11.2 19.6L3 29l6.6-1.7A13 13 0 1 0 16 3zm0 23.6c-2 0-4-.5-5.7-1.6l-.4-.2-3.9 1 1-3.8-.3-.4A10.6 10.6 0 1 1 16 26.6zm5.8-7.9c-.3-.2-1.9-.9-2.2-1-.3-.1-.5-.2-.7.2l-1 1.2c-.2.2-.4.2-.7.1a8.7 8.7 0 0 1-4.3-3.8c-.3-.6.3-.5.9-1.7.1-.2 0-.4 0-.5l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.1 1.1-1.1 2.7s1.2 3.2 1.3 3.4c.2.2 2.3 3.5 5.6 4.9 2.1.9 2.9 1 4 .8.6-.1 1.9-.8 2.2-1.5.3-.8.3-1.4.2-1.5l-.6-.3z"/></svg>
+</button>
+
+<dialog class="wa-dialog" id="wa-dialog" aria-labelledby="wa-title" aria-describedby="wa-desc">
+  <div class="wa-head">
+    <h2 id="wa-title">Chat with IT support</h2>
+    <button type="button" class="icon-btn" id="wa-close" aria-label="Close WhatsApp support">
+      <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <p id="wa-desc">Choose a question to start a WhatsApp chat with IT support on <strong id="wa-number"></strong>. WhatsApp opens in a new tab with your message ready to send.</p>
+  <ul class="wa-list" id="wa-list"></ul>
+  <p class="wa-note">Never share passwords, one-time codes or customer data in chat.</p>
+</dialog>
+
 <!--
   =========================================================
   FORMSUBMIT CONFIGURATION — READ BEFORE USE
@@ -1102,6 +1181,21 @@ const NOTIFY_TIMEOUT_MS = 10000;
 /* Help prompt: shown once per visit after this much time with the page in view. */
 const HELP_PROMPT_DELAY_MS = 10000;
 const IT_SUPPORT_HOTLINE = "12345678";
+
+/* WhatsApp support chat: international number without "+" or spaces, as wa.me expects. */
+const WHATSAPP_NUMBER = "6512345678";
+const WHATSAPP_DISPLAY = "+65 1234 5678";
+const WHATSAPP_GREETING = "Hi IT support, I'm contacting you from the IT PMO portal.";
+const SUPPORT_QUERIES = Object.freeze([
+  "I can't log in to my account.",
+  "I need my password reset.",
+  "How do I add a task to the Kanban board?",
+  "How do I move a task to another column?",
+  "I didn't receive the email notification for a new task.",
+  "I need access to a project workstream.",
+  "I want to report a suspicious email or security issue.",
+  "I have another question for IT support.",
+]);
 
 /* =========================================================
    2. STATE — the single source of truth (in memory only)
@@ -1751,7 +1845,7 @@ function showHelpPrompt() {
   if (state.ui.helpShown) return;
   const dialog = document.getElementById("help-dialog");
   // Never interrupt someone mid-task: wait until the Add task form is closed.
-  if (isDrawerOpen() || typeof dialog.showModal !== "function") return;
+  if (isDrawerOpen() || document.querySelector("dialog[open]") || typeof dialog.showModal !== "function") return;
   state.ui.helpShown = true;
   helpReturnFocus = document.activeElement;
   dialog.showModal();
@@ -1777,7 +1871,52 @@ function initHelpPrompt() {
 }
 
 /* =========================================================
-   13. EVENT BINDING — board clicks, drag & drop, filters, keys
+   13. WHATSAPP SUPPORT — floating button opens suggested questions
+   ========================================================= */
+const ICON_CHEVRON = `<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M6 3.5L10.5 8 6 12.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
+
+/** wa.me click-to-chat link with the message pre-filled. */
+function whatsappLink(query) {
+  const text = `${WHATSAPP_GREETING} ${query}`;
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
+}
+
+function openWhatsappDialog() {
+  const dialog = document.getElementById("wa-dialog");
+  if (dialog.open || typeof dialog.showModal !== "function") return;
+  // The visitor has found support, so the timed help prompt is no longer needed.
+  state.ui.helpShown = true;
+  pauseHelpTimer();
+  dialog.showModal();
+  const first = dialog.querySelector(".wa-query");
+  if (first) first.focus();
+}
+
+function initWhatsapp() {
+  const fab = document.getElementById("wa-open");
+  const dialog = document.getElementById("wa-dialog");
+  // Refuse anything but a plain international number so the link cannot be redirected.
+  if (!/^\d{8,15}$/.test(WHATSAPP_NUMBER)) {
+    fab.hidden = true;
+    return;
+  }
+  setText("wa-number", WHATSAPP_DISPLAY);
+  document.getElementById("wa-list").innerHTML = SUPPORT_QUERIES.map((q) =>
+    `<li><a class="wa-query" href="${escapeHtml(whatsappLink(q))}" target="_blank" rel="noopener noreferrer">${escapeHtml(q)}${ICON_CHEVRON}</a></li>`
+  ).join("");
+
+  fab.addEventListener("click", openWhatsappDialog);
+  document.getElementById("wa-close").addEventListener("click", () => dialog.close());
+  dialog.addEventListener("click", (e) => {
+    if (e.target === dialog) dialog.close();
+    // A question was chosen: WhatsApp opens in a new tab, so close the dialog here.
+    else if (e.target.closest(".wa-query")) dialog.close();
+  });
+  dialog.addEventListener("close", () => fab.focus());
+}
+
+/* =========================================================
+   14. EVENT BINDING — board clicks, drag & drop, filters, keys
    ========================================================= */
 function handleBoardClick(event) {
   const btn = event.target.closest("[data-action]");
@@ -1910,7 +2049,7 @@ function handleOutsideClick(event) {
 }
 
 /* =========================================================
-   14. INIT
+   15. INIT
    ========================================================= */
 
 /**
@@ -1980,6 +2119,7 @@ function init() {
   seedTasks();
   renderBoard();
   initHelpPrompt();
+  initWhatsapp();
 }
 
 document.addEventListener("DOMContentLoaded", init);

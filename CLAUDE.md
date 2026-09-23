@@ -22,7 +22,7 @@ Run it by opening `index.html` directly in a browser (`file://`). No server is n
 
 ## Script architecture
 
-The `<script>` is split into numbered, commented sections: CONFIG, STATE, HELPERS, SEED, FILTERING, RENDERING, ACTIONS, TOASTS, FORMSUBMIT, FORM, DRAWER, HELP PROMPT, EVENTS and INIT.
+The `<script>` is split into numbered, commented sections: CONFIG, STATE, HELPERS, SEED, FILTERING, RENDERING, ACTIONS, TOASTS, FORMSUBMIT, FORM, DRAWER, HELP PROMPT, WHATSAPP SUPPORT, EVENTS and INIT.
 
 - **Single source of truth:** `state = { tasks, filters, ui }`.
   - `ui` holds transient view state: `openMoveId`, `confirmDeleteId`, `draggingId`, `sending`, the notification rate-limit counters `notifyCount` and `lastNotifyAt`, and `helpShown`.
@@ -55,6 +55,12 @@ The `<script>` is split into numbered, commented sections: CONFIG, STATE, HELPER
 - After `HELP_PROMPT_DELAY_MS` (10 s) of the tab being visible, a native `<dialog>` (`#help-dialog`) thanks the visitor and gives the IT support hotline `IT_SUPPORT_HOTLINE` (12345678) with a `tel:` call button. Both constants are in CONFIG.
 - It shows once per page load (no storage, so a refresh shows it again). Hidden-tab time does not count, and if it comes due while the Add task form is open it waits until `closeDrawer()`.
 - This is page code, not a Claude Code hook: `.claude/hooks` only runs on the developer machine and is never deployed.
+
+## WhatsApp support
+
+- A floating button (`#wa-open`, bottom right) opens `#wa-dialog`, a native `<dialog>` listing `SUPPORT_QUERIES`. Each one is a `https://wa.me/WHATSAPP_NUMBER?text=…` link, with `WHATSAPP_GREETING` and the question pre-filled, opened in a new tab with `rel="noopener noreferrer"`.
+- `WHATSAPP_NUMBER` (6512345678) must be digits only. `initWhatsapp()` hides the button if it is not.
+- Opening it sets `helpShown` so the timed help prompt never appears on top of it. Toasts sit above the button (`--fab-size`), and `main` has bottom padding so the button never covers the last cards.
 
 ## FormSubmit config
 
